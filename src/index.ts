@@ -1,7 +1,7 @@
-import * as fs from 'node:fs';
-import { shardStart } from './shard';
-import Logger from './structures/Logger';
-import { ThemeSelector } from './utils/ThemeSelector';
+import * as fs from "node:fs";
+import { shardStart } from "./shard";
+import Logger from "./structures/Logger";
+import { ThemeSelector } from "./utils/ThemeSelector";
 
 const logger = new Logger();
 
@@ -17,18 +17,18 @@ function setConsoleTitle(title: string): void {
 }
 
 try {
-	if (!fs.existsSync('./src/utils/LavaLogo.txt')) {
-		logger.error('LavaLogo.txt file is missing');
+	if (!fs.existsSync("./src/utils/LavaLogo.txt")) {
+		logger.error("LavaLogo.txt file is missing");
 		process.exit(1);
 	}
 	console.clear();
 	// Set a custom title for the console window
-	setConsoleTitle('Lavamusic');
-	const logFile = fs.readFileSync('./src/utils/LavaLogo.txt', 'utf-8');
+	setConsoleTitle("Lavamusic");
+	const logFile = fs.readFileSync("./src/utils/LavaLogo.txt", "utf-8");
 	console.log(theme.purpleNeon(logFile));
 	shardStart(logger);
 } catch (err) {
-	logger.error('[CLIENT] An error has occurred:', err);
+	logger.error("[CLIENT] An error has occurred:", err);
 }
 
 /**
@@ -39,5 +39,5 @@ try {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

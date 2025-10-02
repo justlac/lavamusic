@@ -1,16 +1,20 @@
-import { Command, type Context, type Lavamusic } from '../../structures/index.js';
+import {
+	Command,
+	type Context,
+	type Lavamusic,
+} from "../../structures/index.js";
 
 export default class Rate extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'rate',
+			name: "rate",
 			description: {
-				content: 'cmd.rate.description',
-				examples: ['rate 1', 'rate 1.5', 'rate 1,5'],
-				usage: 'rate <number>',
+				content: "cmd.rate.description",
+				examples: ["rate 1", "rate 1.5", "rate 1,5"],
+				usage: "rate <number>",
 			},
-			category: 'filters',
-			aliases: ['rt'],
+			category: "filters",
+			aliases: ["rt"],
 			cooldown: 3,
 			args: true,
 			vote: false,
@@ -22,25 +26,38 @@ export default class Rate extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: true,
 			options: [
 				{
-					name: 'rate',
-					description: 'cmd.rate.options.rate',
-					type: 3,
+					name: "rate",
+					description: "cmd.rate.options.rate",
+					// 10 = ApplicationCommandOptionType.Number
+					type: 10,
 					required: true,
 				},
 			],
 		});
 	}
 
-	public async run(client: Lavamusic, ctx: Context, args: string[]): Promise<any> {
-		const player = client.manager.getPlayer(ctx.guild!.id);
-		if (!player) return await ctx.sendMessage(ctx.locale('event.message.no_music_playing'));
-		const rateString = args[0].replace(',', '.');
+	public async run(
+		client: Lavamusic,
+		ctx: Context,
+		args: string[],
+	): Promise<any> {
+		const player = client.manager.getPlayer(ctx.guild.id);
+		if (!player)
+			return await ctx.sendMessage(
+				ctx.locale("event.message.no_music_playing"),
+			);
+		const rateString = String(args[0]).replace(",", ".");
 		const isValidNumber = /^[0-9]*\.?[0-9]+$/.test(rateString);
 		const rate = Number.parseFloat(rateString);
 
@@ -48,7 +65,7 @@ export default class Rate extends Command {
 			await ctx.sendMessage({
 				embeds: [
 					{
-						description: ctx.locale('cmd.rate.errors.invalid_number'),
+						description: ctx.locale("cmd.rate.errors.invalid_number"),
 						color: this.client.color.red,
 					},
 				],
@@ -60,7 +77,7 @@ export default class Rate extends Command {
 		await ctx.sendMessage({
 			embeds: [
 				{
-					description: ctx.locale('cmd.rate.messages.rate_set', {
+					description: ctx.locale("cmd.rate.messages.rate_set", {
 						rate,
 					}),
 					color: this.client.color.main,
@@ -78,5 +95,5 @@ export default class Rate extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

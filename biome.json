@@ -1,85 +1,55 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.1.3/schema.json",
 	"vcs": {
-		"enabled": true,
+		"enabled": false,
 		"clientKind": "git",
-		"useIgnoreFile": true,
-		"defaultBranch": "main"
+		"useIgnoreFile": false
 	},
 	"files": {
-		"ignoreUnknown": true,
-		"ignore": ["node_modules/", "dist", "package.json", "tsconfig.json", ".vscode"]
+		"ignoreUnknown": false,
+		"includes": [
+			"**/src/**",
+			"!**/node_modules/**",
+			"!**/dist/**",
+			"!/package.json",
+			"!/tsconfig.json",
+			"!/.vscode"
+		]
 	},
 	"formatter": {
 		"enabled": true,
-		"indentStyle": "tab",
-		"indentWidth": 2,
-		"lineWidth": 120,
-		"lineEnding": "crlf",
-		"formatWithErrors": true
-	},
-	"organizeImports": {
-		"enabled": true
+		"indentStyle": "tab"
 	},
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": false,
-			"all": true,
-			"security": {
-				"noGlobalEval": "off"
-			},
+			"recommended": true,
 			"suspicious": {
 				"noExplicitAny": "off",
 				"noAssignInExpressions": "off",
-				"useAwait": "off",
-				"noConfusingVoidType": "off",
-				"noAsyncPromiseExecutor": "off",
-				"noUnsafeDeclarationMerging": "off",
-				"noEmptyInterface": "off",
-				"noThenProperty": "off"
-			},
-			"correctness": {
-				"noNodejsModules": "off",
-				"useImportExtensions": "off",
-				"noUnusedFunctionParameters": "off",
-				"noUnusedVariables": "off"
-			},
-			"style": {
-				"noDefaultExport": "off",
-				"useBlockStatements": "off",
-				"noParameterProperties": "off",
-				"useNamingConvention": "off",
-				"noNonNullAssertion": "off",
-				"useForOf": "off",
-				"useDefaultSwitchClause": "off",
-				"noParameterAssign": "off",
-				"useFilenamingConvention": "off",
-				"useEnumInitializers": "off",
-				"useExplicitLengthCheck": "off",
-				"noNamespaceImport": "off",
-				"noInferrableTypes": "info"
+				"noRedundantUseStrict": "off"
 			},
 			"complexity": {
-				"noForEach": "off",
-				"noExcessiveCognitiveComplexity": "off",
-				"noUselessConstructor": "off",
-				"noBannedTypes": "off"
+				"noCommaOperator": "off",
+				"noThisInStatic": "off"
 			},
-			"performance": {
-				"noBarrelFile": "off",
-				"noDelete": "off",
-				"noReExportAll": "off",
-				"useTopLevelRegex": "off"
+			"style": {
+				"noNonNullAssertion": "off",
+				"useNodejsImportProtocol": "off"
 			}
 		}
 	},
 	"javascript": {
 		"formatter": {
-			"quoteStyle": "single",
-			"semicolons": "always",
-			"arrowParentheses": "asNeeded",
-			"bracketSameLine": true
+			"quoteStyle": "double"
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "off"
+			}
 		}
 	}
 }

@@ -1,7 +1,7 @@
+/** biome-ignore-all lint/style/noNonNullAssertion: explanation */
 import {
 	type APIInteractionGuildMember,
 	ChatInputCommandInteraction,
-	type CommandInteraction,
 	type Guild,
 	type GuildMember,
 	type GuildMemberResolvable,
@@ -14,14 +14,14 @@ import {
 	type TextBasedChannel,
 	type TextChannel,
 	type User,
-} from 'discord.js';
-import { env } from '../env';
-import { T } from './I18n';
-import type { Lavamusic } from './index';
+} from "discord.js";
+import { env } from "../env";
+import { T } from "./I18n";
+import type { Lavamusic } from "./index";
 
 export default class Context {
-	public ctx: CommandInteraction | Message;
-	public interaction: CommandInteraction | null;
+	public ctx: ChatInputCommandInteraction | Message;
+	public interaction: ChatInputCommandInteraction | null;
 	public message: Message | null;
 	public id: string;
 	public channelId: string;
@@ -31,7 +31,11 @@ export default class Context {
 	public guild: Guild;
 	public createdAt: Date;
 	public createdTimestamp: number;
-	public member: GuildMemberResolvable | GuildMember | APIInteractionGuildMember | null;
+	public member:
+		| GuildMemberResolvable
+		| GuildMember
+		| APIInteractionGuildMember
+		| null;
 	public args: any[];
 	public msg: any;
 	public guildLocale: string | undefined;
@@ -55,8 +59,10 @@ export default class Context {
 	}
 
 	private async setUpLocale(): Promise<void> {
-		const defaultLanguage = env.DEFAULT_LANGUAGE || 'EnglishUS';
-		this.guildLocale = this.guild ? await this.client.db.getLanguage(this.guild.id) : defaultLanguage;
+		const defaultLanguage = env.DEFAULT_LANGUAGE || "EnglishUS";
+		this.guildLocale = this.guild
+			? await this.client.db.getLanguage(this.guild.id)
+			: defaultLanguage;
 	}
 
 	public get isInteraction(): boolean {
@@ -64,18 +70,24 @@ export default class Context {
 	}
 
 	public setArgs(args: any[]): void {
-		this.args = this.isInteraction ? args.map((arg: { value: any }) => arg.value) : args;
+		this.args = this.isInteraction
+			? args.map((arg: { value: any }) => arg.value)
+			: args;
 	}
 
 	public async sendMessage(
-		content: string | MessagePayload | MessageCreateOptions | InteractionReplyOptions,
+		content:
+			| string
+			| MessagePayload
+			| MessageCreateOptions
+			| InteractionReplyOptions,
 	): Promise<Message> {
 		if (this.isInteraction) {
-			if (typeof content === 'string' || isInteractionReplyOptions(content)) {
+			if (typeof content === "string" || isInteractionReplyOptions(content)) {
 				this.msg = await this.interaction?.reply(content);
 				return this.msg;
 			}
-		} else if (typeof content === 'string' || isMessagePayload(content)) {
+		} else if (typeof content === "string" || isMessagePayload(content)) {
 			this.msg = await (this.message?.channel as TextChannel).send(content);
 			return this.msg;
 		}
@@ -83,7 +95,11 @@ export default class Context {
 	}
 
 	public async editMessage(
-		content: string | MessagePayload | InteractionEditReplyOptions | MessageEditOptions,
+		content:
+			| string
+			| MessagePayload
+			| InteractionEditReplyOptions
+			| MessageEditOptions,
 	): Promise<Message> {
 		if (this.isInteraction && this.msg) {
 			this.msg = await this.interaction?.editReply(content);
@@ -96,9 +112,12 @@ export default class Context {
 		return this.msg;
 	}
 
-	public async sendDeferMessage(content: string | MessagePayload | MessageCreateOptions): Promise<Message> {
+	public async sendDeferMessage(
+		content: string | MessagePayload | MessageCreateOptions,
+	): Promise<Message> {
 		if (this.isInteraction) {
-			this.msg = await this.interaction?.deferReply({ fetchReply: true });
+			await this.interaction?.deferReply();
+			this.msg = (await this.interaction?.fetchReply()) as Message;
 			return this.msg;
 		}
 
@@ -107,18 +126,23 @@ export default class Context {
 	}
 
 	public locale(key: string, ...args: any) {
-		if (!this.guildLocale) this.guildLocale = env.DEFAULT_LANGUAGE || 'EnglishUS';
+		if (!this.guildLocale)
+			this.guildLocale = env.DEFAULT_LANGUAGE || "EnglishUS";
 		return T(this.guildLocale, key, ...args);
 	}
 
 	public async sendFollowUp(
-		content: string | MessagePayload | MessageCreateOptions | InteractionReplyOptions,
+		content:
+			| string
+			| MessagePayload
+			| MessageCreateOptions
+			| InteractionReplyOptions,
 	): Promise<void> {
 		if (this.isInteraction) {
-			if (typeof content === 'string' || isInteractionReplyOptions(content)) {
+			if (typeof content === "string" || isInteractionReplyOptions(content)) {
 				await this.interaction?.followUp(content);
 			}
-		} else if (typeof content === 'string' || isMessagePayload(content)) {
+		} else if (typeof content === "string" || isMessagePayload(content)) {
 			this.msg = await (this.message?.channel as TextChannel).send(content);
 		}
 	}
@@ -146,7 +170,9 @@ export default class Context {
 	};
 }
 
-function isInteractionReplyOptions(content: any): content is InteractionReplyOptions {
+function isInteractionReplyOptions(
+	content: any,
+): content is InteractionReplyOptions {
 	return content instanceof Object;
 }
 
@@ -162,5 +188,5 @@ function isMessagePayload(content: any): content is MessagePayload {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

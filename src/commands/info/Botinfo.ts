@@ -1,19 +1,19 @@
-import os from 'node:os';
-import { version } from 'discord.js';
-import { showTotalMemory, usagePercent } from 'node-system-stats';
-import { Command, type Context, type Lavamusic } from '../../structures/index';
+import os from "node:os";
+import { version } from "discord.js";
+import { showTotalMemory, usagePercent } from "node-system-stats";
+import { Command, type Context, type Lavamusic } from "../../structures/index";
 
 export default class Botinfo extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'botinfo',
+			name: "botinfo",
 			description: {
-				content: 'cmd.botinfo.description',
-				examples: ['botinfo'],
-				usage: 'botinfo',
+				content: "cmd.botinfo.description",
+				examples: ["botinfo"],
+				usage: "botinfo",
 			},
-			category: 'info',
-			aliases: ['bi', 'info', 'stats', 'status'],
+			category: "info",
+			aliases: ["bi", "info", "stats", "status"],
 			cooldown: 3,
 			args: false,
 			vote: false,
@@ -25,7 +25,12 @@ export default class Botinfo extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: true,
@@ -38,7 +43,8 @@ export default class Botinfo extends Command {
 		const osUptime = client.utils.formatTime(os.uptime());
 		const osHostname = os.hostname();
 		const cpuInfo = `${os.arch()} (${os.cpus().length} cores)`;
-		const cpuUsed = (await usagePercent({ coreIndex: 0, sampleMs: 2000 })).percent;
+		const cpuUsed = (await usagePercent({ coreIndex: 0, sampleMs: 2000 }))
+			.percent;
 		const memTotal = showTotalMemory(true);
 		const memUsed = (process.memoryUsage().rss / 1024 ** 2).toFixed(2);
 		const nodeVersion = process.version;
@@ -46,16 +52,27 @@ export default class Botinfo extends Command {
 		const commands = client.commands.size;
 
 		const promises = [
-			client.shard?.broadcastEval(client => client.guilds.cache.size),
-			client.shard?.broadcastEval(client => client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0)),
-			client.shard?.broadcastEval(client => client.channels.cache.size),
+			client.shard?.broadcastEval((client) => client.guilds.cache.size),
+			client.shard?.broadcastEval((client) =>
+				client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0),
+			),
+			client.shard?.broadcastEval((client) => client.channels.cache.size),
 		];
-		return Promise.all(promises).then(async results => {
-			const guilds = results[0]?.reduce((acc, guildCount) => acc + guildCount, 0);
-			const users = results[1]?.reduce((acc, memberCount) => acc + memberCount, 0);
-			const channels = results[2]?.reduce((acc, channelCount) => acc + channelCount, 0);
+		return Promise.all(promises).then(async (results) => {
+			const guilds = results[0]?.reduce(
+				(acc, guildCount) => acc + guildCount,
+				0,
+			);
+			const users = results[1]?.reduce(
+				(acc, memberCount) => acc + memberCount,
+				0,
+			);
+			const channels = results[2]?.reduce(
+				(acc, channelCount) => acc + channelCount,
+				0,
+			);
 
-			const botInfo = ctx.locale('cmd.botinfo.content', {
+			const botInfo = ctx.locale("cmd.botinfo.content", {
 				osInfo,
 				osUptime,
 				osHostname,
@@ -71,7 +88,10 @@ export default class Botinfo extends Command {
 				commands,
 			});
 
-			const embed = this.client.embed().setColor(this.client.color.main).setDescription(botInfo);
+			const embed = this.client
+				.embed()
+				.setColor(this.client.color.main)
+				.setDescription(botInfo);
 
 			return await ctx.sendMessage({
 				embeds: [embed],
@@ -88,5 +108,5 @@ export default class Botinfo extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

@@ -1,16 +1,20 @@
-import { Command, type Context, type Lavamusic } from '../../structures/index.js';
+import {
+	Command,
+	type Context,
+	type Lavamusic,
+} from "../../structures/index.js";
 
 export default class Rotation extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'rotation',
+			name: "rotation",
 			description: {
-				content: 'cmd.rotation.description',
-				examples: ['rotation'],
-				usage: 'rotation',
+				content: "cmd.rotation.description",
+				examples: ["rotation"],
+				usage: "rotation",
 			},
-			category: 'filters',
-			aliases: ['rt'],
+			category: "filters",
+			aliases: ["rt"],
 			cooldown: 3,
 			args: false,
 			vote: false,
@@ -22,7 +26,12 @@ export default class Rotation extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: true,
@@ -31,14 +40,17 @@ export default class Rotation extends Command {
 	}
 
 	public async run(client: Lavamusic, ctx: Context): Promise<any> {
-		const player = client.manager.getPlayer(ctx.guild!.id);
-		if (!player) return await ctx.sendMessage(ctx.locale('event.message.no_music_playing'));
+		const player = client.manager.getPlayer(ctx.guild.id);
+		if (!player)
+			return await ctx.sendMessage(
+				ctx.locale("event.message.no_music_playing"),
+			);
 		if (player.filterManager.filters.rotation) {
 			player.filterManager.toggleRotation();
 			await ctx.sendMessage({
 				embeds: [
 					{
-						description: ctx.locale('cmd.rotation.messages.disabled'),
+						description: ctx.locale("cmd.rotation.messages.disabled"),
 						color: this.client.color.main,
 					},
 				],
@@ -48,7 +60,7 @@ export default class Rotation extends Command {
 			await ctx.sendMessage({
 				embeds: [
 					{
-						description: ctx.locale('cmd.rotation.messages.enabled'),
+						description: ctx.locale("cmd.rotation.messages.enabled"),
 						color: this.client.color.main,
 					},
 				],
@@ -65,5 +77,5 @@ export default class Rotation extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

@@ -1,17 +1,18 @@
-import { ChannelType, PermissionFlagsBits, type TextChannel } from 'discord.js';
-import { Command, type Context, type Lavamusic } from '../../structures/index';
+/** biome-ignore-all lint/style/noNonNullAssertion: explanation */
+import { ChannelType, PermissionFlagsBits, type TextChannel } from "discord.js";
+import { Command, type Context, type Lavamusic } from "../../structures/index";
 
 export default class CreateInvite extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'createinvite',
+			name: "createinvite",
 			description: {
-				content: 'Create an invite link for a guild',
-				examples: ['createinvite 0000000000000000000'],
-				usage: 'createinvite <guildId>',
+				content: "Create an invite link for a guild",
+				examples: ["createinvite 0000000000000000000"],
+				usage: "createinvite <guildId>",
 			},
-			category: 'dev',
-			aliases: ['ci', 'gi', 'ginvite', 'guildinvite'],
+			category: "dev",
+			aliases: ["ci", "gi", "ginvite", "guildinvite"],
 			cooldown: 3,
 			args: true,
 			player: {
@@ -22,7 +23,13 @@ export default class CreateInvite extends Command {
 			},
 			permissions: {
 				dev: true,
-				client: ['SendMessages', 'CreateInstantInvite', 'ReadMessageHistory', 'EmbedLinks', 'ViewChannel'],
+				client: [
+					"SendMessages",
+					"CreateInstantInvite",
+					"ReadMessageHistory",
+					"EmbedLinks",
+					"ViewChannel",
+				],
 				user: [],
 			},
 			slashCommand: false,
@@ -30,17 +37,26 @@ export default class CreateInvite extends Command {
 		});
 	}
 
-	public async run(client: Lavamusic, ctx: Context, args: string[]): Promise<any> {
+	public async run(
+		client: Lavamusic,
+		ctx: Context,
+		args: string[],
+	): Promise<any> {
 		const guild = client.guilds.cache.get(args[0]);
 
 		if (!guild) {
 			return await ctx.sendMessage({
-				embeds: [this.client.embed().setColor(this.client.color.red).setDescription('Guild not found')],
+				embeds: [
+					this.client
+						.embed()
+						.setColor(this.client.color.red)
+						.setDescription("Guild not found"),
+				],
 			});
 		}
 
 		const textChannel = guild.channels.cache.find(
-			c =>
+			(c) =>
 				c.type === ChannelType.GuildText &&
 				c
 					.permissionsFor(guild.members.me!)
@@ -53,7 +69,12 @@ export default class CreateInvite extends Command {
 
 		if (!textChannel) {
 			return await ctx.sendMessage({
-				embeds: [this.client.embed().setColor(this.client.color.red).setDescription('No suitable channel found')],
+				embeds: [
+					this.client
+						.embed()
+						.setColor(this.client.color.red)
+						.setDescription("No suitable channel found"),
+				],
 			});
 		}
 
@@ -68,7 +89,9 @@ export default class CreateInvite extends Command {
 				this.client
 					.embed()
 					.setColor(this.client.color.main)
-					.setDescription(`Invite link for ${guild.name}: [Link](${invite.url})`),
+					.setDescription(
+						`Invite link for ${guild.name}: [Link](${invite.url})`,
+					),
 			],
 		});
 	}
@@ -82,5 +105,5 @@ export default class CreateInvite extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

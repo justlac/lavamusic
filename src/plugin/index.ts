@@ -1,12 +1,14 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import type { Lavamusic } from '../structures/index';
+import fs from "node:fs";
+import path from "node:path";
+import type { Lavamusic } from "../structures/index";
 
-const pluginsFolder = path.join(__dirname, 'plugins');
+const pluginsFolder = path.join(process.cwd(), "dist", "plugin", "plugins");
 
 export default async function loadPlugins(client: Lavamusic): Promise<void> {
 	try {
-		const pluginFiles = fs.readdirSync(pluginsFolder).filter(file => file.endsWith('.js'));
+		const pluginFiles = fs
+			.readdirSync(pluginsFolder)
+			.filter((file) => file.endsWith(".js"));
 		for (const file of pluginFiles) {
 			const pluginPath = path.join(pluginsFolder, file);
 			const { default: plugin } = require(pluginPath);
@@ -14,7 +16,7 @@ export default async function loadPlugins(client: Lavamusic): Promise<void> {
 			client.logger.info(`Loaded plugin: ${plugin.name} v${plugin.version}`);
 		}
 	} catch (error) {
-		client.logger.error('Error loading plugins:', error);
+		client.logger.error("Error loading plugins:", error);
 	}
 }
 
@@ -35,5 +37,5 @@ export interface BotPlugin {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

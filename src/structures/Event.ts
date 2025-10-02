@@ -1,13 +1,16 @@
-import type { ButtonInteraction, ClientEvents, Message } from 'discord.js';
-import type { LavalinkManagerEvents, NodeManagerEvents } from 'lavalink-client';
-import type Lavamusic from './Lavamusic';
+import type { ButtonInteraction, ClientEvents, Message } from "discord.js";
+import type { LavalinkManagerEvents, NodeManagerEvents } from "lavalink-client";
+import type Lavamusic from "./Lavamusic";
 
 // custom client events setupSystem and setupButtons
 interface CustomClientEvents {
 	setupSystem: (message: Message) => void;
 	setupButtons: (interaction: ButtonInteraction) => void;
 }
-export type AllEvents = LavalinkManagerEvents & NodeManagerEvents & ClientEvents & CustomClientEvents;
+export type AllEvents = LavalinkManagerEvents &
+	NodeManagerEvents &
+	ClientEvents &
+	CustomClientEvents;
 
 interface EventOptions {
 	name: keyof AllEvents;
@@ -26,7 +29,7 @@ export default class Event {
 		this.file = file;
 		this.name = options.name;
 		this.one = options.one ?? false;
-		this.fileName = file.split('.')[0];
+		this.fileName = file.split(".")[0];
 	}
 
 	public async run(..._args: any): Promise<void> {
@@ -42,5 +45,5 @@ export default class Event {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

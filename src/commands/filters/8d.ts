@@ -1,16 +1,20 @@
-import { Command, type Context, type Lavamusic } from '../../structures/index.js';
+import {
+	Command,
+	type Context,
+	type Lavamusic,
+} from "../../structures/index.js";
 
 export default class _8d extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: '8d',
+			name: "8d",
 			description: {
-				content: 'cmd.8d.description',
-				examples: ['8d'],
-				usage: '8d',
+				content: "cmd.8d.description",
+				examples: ["8d"],
+				usage: "8d",
 			},
-			category: 'filters',
-			aliases: ['3d'],
+			category: "filters",
+			aliases: ["3d"],
 			cooldown: 3,
 			args: false,
 			vote: false,
@@ -22,7 +26,12 @@ export default class _8d extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: true,
@@ -31,8 +40,11 @@ export default class _8d extends Command {
 	}
 
 	public async run(client: Lavamusic, ctx: Context): Promise<any> {
-		const player = client.manager.getPlayer(ctx.guild!.id);
-		if (!player) return await ctx.sendMessage(ctx.locale('event.message.no_music_playing'));
+		const player = client.manager.getPlayer(ctx.guild.id);
+		if (!player)
+			return await ctx.sendMessage(
+				ctx.locale("event.message.no_music_playing"),
+			);
 		const filterEnabled = player.filterManager.filters.rotation;
 
 		if (filterEnabled) {
@@ -40,7 +52,7 @@ export default class _8d extends Command {
 			await ctx.sendMessage({
 				embeds: [
 					{
-						description: ctx.locale('cmd.8d.messages.filter_disabled'),
+						description: ctx.locale("cmd.8d.messages.filter_disabled"),
 						color: this.client.color.main,
 					},
 				],
@@ -50,7 +62,7 @@ export default class _8d extends Command {
 			await ctx.sendMessage({
 				embeds: [
 					{
-						description: ctx.locale('cmd.8d.messages.filter_enabled'),
+						description: ctx.locale("cmd.8d.messages.filter_enabled"),
 						color: this.client.color.main,
 					},
 				],
@@ -67,5 +79,5 @@ export default class _8d extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

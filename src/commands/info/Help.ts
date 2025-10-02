@@ -1,16 +1,16 @@
-import { Command, type Context, type Lavamusic } from '../../structures/index';
+import { Command, type Context, type Lavamusic } from "../../structures/index";
 
 export default class Help extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'help',
+			name: "help",
 			description: {
-				content: 'cmd.help.description',
-				examples: ['help'],
-				usage: 'help',
+				content: "cmd.help.description",
+				examples: ["help"],
+				usage: "help",
 			},
-			category: 'info',
-			aliases: ['h'],
+			category: "info",
+			aliases: ["h"],
 			cooldown: 3,
 			args: false,
 			vote: false,
@@ -22,14 +22,19 @@ export default class Help extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: true,
 			options: [
 				{
-					name: 'command',
-					description: 'cmd.help.options.command',
+					name: "command",
+					description: "cmd.help.options.command",
 					type: 3,
 					required: false,
 				},
@@ -37,11 +42,17 @@ export default class Help extends Command {
 		});
 	}
 
-	public async run(client: Lavamusic, ctx: Context, args: string[]): Promise<any> {
+	public async run(
+		client: Lavamusic,
+		ctx: Context,
+		args: string[],
+	): Promise<any> {
 		const embed = this.client.embed();
-		const guild = await client.db.get(ctx.guild!.id);
-		const commands = this.client.commands.filter(cmd => cmd.category !== 'dev');
-		const categories = [...new Set(commands.map(cmd => cmd.category))];
+		const guild = await client.db.get(ctx.guild.id);
+		const commands = this.client.commands.filter(
+			(cmd) => cmd.category !== "dev",
+		);
+		const categories = [...new Set(commands.map((cmd) => cmd.category))];
 
 		if (args[0]) {
 			const command = this.client.commands.get(args[0].toLowerCase());
@@ -49,7 +60,7 @@ export default class Help extends Command {
 				return await ctx.sendMessage({
 					embeds: [
 						embed.setColor(this.client.color.red).setDescription(
-							ctx.locale('cmd.help.not_found', {
+							ctx.locale("cmd.help.not_found", {
 								cmdName: args[0],
 							}),
 						),
@@ -58,52 +69,60 @@ export default class Help extends Command {
 			}
 			const helpEmbed = embed
 				.setColor(client.color.main)
-				.setTitle(`${ctx.locale('cmd.help.title')} - ${command.name}`)
+				.setTitle(`${ctx.locale("cmd.help.title")} - ${command.name}`)
 				.setDescription(
-					ctx.locale('cmd.help.help_cmd', {
+					ctx.locale("cmd.help.help_cmd", {
 						description: ctx.locale(command.description.content),
 						usage: `${guild?.prefix}${command.description.usage}`,
-						examples: command.description.examples.map((example: string) => `${guild.prefix}${example}`).join(', '),
-						aliases: command.aliases.map((alias: string) => `\`${alias}\``).join(', '),
+						examples: command.description.examples
+							.map((example: string) => `${guild.prefix}${example}`)
+							.join(", "),
+						aliases: command.aliases
+							.map((alias: string) => `\`${alias}\``)
+							.join(", "),
 						category: command.category,
 						cooldown: command.cooldown,
 						premUser:
-							command.permissions.user.length > 0
-								? command.permissions.user.map((perm: string) => `\`${perm}\``).join(', ')
-								: 'None',
-						premBot: command.permissions.client.map((perm: string) => `\`${perm}\``).join(', '),
-						dev: command.permissions.dev ? 'Yes' : 'No',
-						slash: command.slashCommand ? 'Yes' : 'No',
-						args: command.args ? 'Yes' : 'No',
-						player: command.player.active ? 'Yes' : 'No',
-						dj: command.player.dj ? 'Yes' : 'No',
-						djPerm: command.player.djPerm ? command.player.djPerm : 'None',
-						voice: command.player.voice ? 'Yes' : 'No',
+							(command.permissions.user as string[]).length > 0
+								? (command.permissions.user as string[])
+										.map((perm: string) => `\`${perm}\``)
+										.join(", ")
+								: "None",
+						premBot: (command.permissions.client as string[])
+							.map((perm: string) => `\`${perm}\``)
+							.join(", "),
+						dev: command.permissions.dev ? "Yes" : "No",
+						slash: command.slashCommand ? "Yes" : "No",
+						args: command.args ? "Yes" : "No",
+						player: command.player.active ? "Yes" : "No",
+						dj: command.player.dj ? "Yes" : "No",
+						djPerm: command.player.djPerm ? command.player.djPerm : "None",
+						voice: command.player.voice ? "Yes" : "No",
 					}),
 				);
 			return await ctx.sendMessage({ embeds: [helpEmbed] });
 		}
 
-		const fields = categories.map(category => ({
+		const fields = categories.map((category) => ({
 			name: category,
 			value: commands
-				.filter(cmd => cmd.category === category)
-				.map(cmd => `\`${cmd.name}\``)
-				.join(', '),
+				.filter((cmd) => cmd.category === category)
+				.map((cmd) => `\`${cmd.name}\``)
+				.join(", "),
 			inline: false,
 		}));
 
 		const helpEmbed = embed
 			.setColor(client.color.main)
-			.setTitle(ctx.locale('cmd.help.title'))
+			.setTitle(ctx.locale("cmd.help.title"))
 			.setDescription(
-				ctx.locale('cmd.help.content', {
+				ctx.locale("cmd.help.content", {
 					bot: client.user?.username,
 					prefix: guild.prefix,
 				}),
 			)
 			.setFooter({
-				text: ctx.locale('cmd.help.footer', { prefix: guild.prefix }),
+				text: ctx.locale("cmd.help.footer", { prefix: guild.prefix }),
 			})
 			.addFields(...fields);
 
@@ -119,5 +138,5 @@ export default class Help extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

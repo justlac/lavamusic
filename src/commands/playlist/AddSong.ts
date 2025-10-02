@@ -1,17 +1,20 @@
-import type { AutocompleteInteraction } from 'discord.js';
-import { Command, type Context, type Lavamusic } from '../../structures/index';
+import type { AutocompleteInteraction } from "discord.js";
+import { Command, type Context, type Lavamusic } from "../../structures/index";
 
 export default class AddSong extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'addsong',
+			name: "addsong",
 			description: {
-				content: 'cmd.addsong.description',
-				examples: ['addsong test exemple', 'addsong exemple https://www.youtube.com/watch?v=example'],
-				usage: 'addsong <playlist> <song>',
+				content: "cmd.addsong.description",
+				examples: [
+					"addsong test exemple",
+					"addsong exemple https://www.youtube.com/watch?v=example",
+				],
+				usage: "addsong <playlist> <song>",
 			},
-			category: 'playlist',
-			aliases: ['as'],
+			category: "playlist",
+			aliases: ["as"],
 			cooldown: 3,
 			args: true,
 			vote: true,
@@ -23,21 +26,26 @@ export default class AddSong extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: true,
 			options: [
 				{
-					name: 'playlist',
-					description: 'cmd.addsong.options.playlist',
+					name: "playlist",
+					description: "cmd.addsong.options.playlist",
 					type: 3,
 					required: true,
 					autocomplete: true,
 				},
 				{
-					name: 'song',
-					description: 'cmd.addsong.options.song',
+					name: "song",
+					description: "cmd.addsong.options.song",
 					type: 3,
 					required: true,
 				},
@@ -45,15 +53,19 @@ export default class AddSong extends Command {
 		});
 	}
 
-	public async run(client: Lavamusic, ctx: Context, args: string[]): Promise<any> {
+	public async run(
+		client: Lavamusic,
+		ctx: Context,
+		args: string[],
+	): Promise<any> {
 		const playlist = args.shift();
-		const song = args.join(' ');
+		const song = args.join(" ");
 
 		if (!playlist) {
 			return await ctx.sendMessage({
 				embeds: [
 					{
-						description: ctx.locale('cmd.addsong.messages.no_playlist'),
+						description: ctx.locale("cmd.addsong.messages.no_playlist"),
 						color: this.client.color.red,
 					},
 				],
@@ -64,7 +76,7 @@ export default class AddSong extends Command {
 			return await ctx.sendMessage({
 				embeds: [
 					{
-						description: ctx.locale('cmd.addsong.messages.no_song'),
+						description: ctx.locale("cmd.addsong.messages.no_song"),
 						color: this.client.color.red,
 					},
 				],
@@ -75,7 +87,7 @@ export default class AddSong extends Command {
 			return await ctx.sendMessage({
 				embeds: [
 					{
-						description: ctx.locale('cmd.addsong.messages.no_songs_found'),
+						description: ctx.locale("cmd.addsong.messages.no_songs_found"),
 						color: this.client.color.red,
 					},
 				],
@@ -87,7 +99,7 @@ export default class AddSong extends Command {
 			return await ctx.sendMessage({
 				embeds: [
 					{
-						description: ctx.locale('cmd.addsong.messages.playlist_not_found'),
+						description: ctx.locale("cmd.addsong.messages.playlist_not_found"),
 						color: this.client.color.red,
 					},
 				],
@@ -96,39 +108,50 @@ export default class AddSong extends Command {
 
 		let trackStrings: any;
 		let count = 0;
-		if (res.loadType === 'playlist') {
-			trackStrings = res.tracks.map(track => track.encoded);
+		if (res.loadType === "playlist") {
+			trackStrings = res.tracks.map((track) => track.encoded);
 			count = res.tracks.length;
-		} else if (res.loadType === 'track') {
+		} else if (res.loadType === "track") {
 			trackStrings = [res.tracks[0].encoded];
 			count = 1;
-		} else if (res.loadType === 'search') {
+		} else if (res.loadType === "search") {
 			trackStrings = [res.tracks[0].encoded];
 			count = 1;
 		}
 
-		await client.db.addTracksToPlaylist(ctx.author?.id!, playlist, trackStrings);
+		await client.db.addTracksToPlaylist(
+			ctx.author?.id!,
+			playlist,
+			trackStrings,
+		);
 
 		return await ctx.sendMessage({
 			embeds: [
 				{
-					description: ctx.locale('cmd.addsong.messages.added', { playlist: playlistData.name, count }),
+					description: ctx.locale("cmd.addsong.messages.added", {
+						playlist: playlistData.name,
+						count,
+					}),
 					color: this.client.color.green,
 				},
 			],
 		});
 	}
 
-	public async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
+	public async autocomplete(
+		interaction: AutocompleteInteraction,
+	): Promise<void> {
 		const focusedValue = interaction.options.getFocused();
 		const userId = interaction.user.id;
 
 		const playlists = await this.client.db.getUserPlaylists(userId);
 
-		const filtered = playlists.filter(playlist => playlist.name.toLowerCase().startsWith(focusedValue.toLowerCase()));
+		const filtered = playlists.filter((playlist) =>
+			playlist.name.toLowerCase().startsWith(focusedValue.toLowerCase()),
+		);
 
 		return await interaction.respond(
-			filtered.map(playlist => ({
+			filtered.slice(0, 25).map((playlist) => ({
 				name: playlist.name,
 				value: playlist.name,
 			})),
@@ -144,5 +167,5 @@ export default class AddSong extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

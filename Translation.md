@@ -24,7 +24,7 @@
 - [x] Hindi - `Hindi.json` [by @Appujet](https://github.com/Appujet) (Ai Translation - Not Accurate)
 - [ ] Hungarian - `Hungarian.json` (Not Started)
 - [x] Indonesian - `Indonesian.json` [by @iaMJ](https://github.com/idMJA)
-- [ ] Italian - `Italian.json` (Not Started)
+- [x] Italian - `Italian.json` [by @lori28167](https://github.com/lori28167)
 - [x] Japanese - `Japanese.json` [by @hatry4](https://github.com/hatry4)
 - [x] Korean - `Korean.json` [by @hwangsihu](https://github.com/hwangsihu)
 - [ ] Lithuanian - `Lithuanian.json` (Not Started)
@@ -36,7 +36,7 @@
 - [x] Russian - `Russian.json` [by @LucasB25](https://github.com/LucasB25)
 - [x] Spanish (ES) - `SpanishES.json` [by @LucasB25](https://github.com/LucasB25)
 - [ ] Swedish - `Swedish.json` (Not Started)
-- [ ] Thai - `Thai.json` (Not Started)
+- [x] Thai - `Thai.json` [by @fexncns](https://github.com/fexncns)
 - [x] Turkish - `Turkish.json` [by @IlkayAksoy](https://github.com/IlkayAksoy)
 - [ ] Ukrainian - `Ukrainian.json` (Not Started)
 - [x] Vietnamese - `Vietnamese.json` [by @nhutlamm](https://github.com/nhutlamm) (Ai Translation - Not Accurate)
@@ -69,13 +69,13 @@ The translation JSON file should be structured as follows:
 
 ```json
 {
- "category": {
-  "command": {
-   "description": "Description of the command.",
-   "content": "Command content.",
-   "key": "value"
+  "category": {
+    "command": {
+      "description": "Description of the command.",
+      "content": "Command content.",
+      "key": "value"
+    }
   }
- }
 }
 ```
 
@@ -85,15 +85,15 @@ The translation JSON file should be structured as follows:
 
 ```json
 {
- "cmd": {
-  "ping": {
-   "description": "Shows the bot's ping.",
-   "content": "Pinging...",
-   "bot_latency": "Bot Latency",
-   "api_latency": "API Latency",
-   "requested_by": "Requested by {author}"
+  "cmd": {
+    "ping": {
+      "description": "Shows the bot's ping.",
+      "content": "Pinging...",
+      "bot_latency": "Bot Latency",
+      "api_latency": "API Latency",
+      "requested_by": "Requested by {author}"
+    }
   }
- }
 }
 ```
 
@@ -101,15 +101,15 @@ The translation JSON file should be structured as follows:
 
 ```json
 {
- "cmd": {
-  "ping": {
-   "description": "बॉट का पिंग दिखाता है।",
-   "content": "पिंगिंग...",
-   "bot_latency": "पिंगिंग...",
-   "api_latency": "एपीआई लेटेंसी",
-   "requested_by": "{author} द्वारा अनुरोधित"
+  "cmd": {
+    "ping": {
+      "description": "बॉट का पिंग दिखाता है।",
+      "content": "पिंगिंग...",
+      "bot_latency": "पिंगिंग...",
+      "api_latency": "एपीआई लेटेंसी",
+      "requested_by": "{author} द्वारा अनुरोधित"
+    }
   }
- }
 }
 ```
 

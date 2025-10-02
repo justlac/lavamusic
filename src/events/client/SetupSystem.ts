@@ -1,12 +1,12 @@
-import { type Message, TextChannel } from 'discord.js';
-import { T } from '../../structures/I18n';
-import { Event, type Lavamusic } from '../../structures/index';
-import { oops, setupStart } from '../../utils/SetupSystem';
+import { type Message, TextChannel } from "discord.js";
+import { T } from "../../structures/I18n";
+import { Event, type Lavamusic } from "../../structures/index";
+import { oops, setupStart } from "../../utils/SetupSystem";
 
 export default class SetupSystem extends Event {
 	constructor(client: Lavamusic, file: string) {
 		super(client, file, {
-			name: 'setupSystem',
+			name: "setupSystem",
 		});
 	}
 
@@ -15,7 +15,7 @@ export default class SetupSystem extends Event {
 		const channel = message.channel as TextChannel;
 		if (!(channel instanceof TextChannel)) return;
 		if (!message.member?.voice.channel) {
-			await oops(channel, T(locale, 'event.message.no_voice_channel_queue'));
+			await oops(channel, T(locale, "event.message.no_voice_channel_queue"));
 			await message.delete().catch(() => {
 				null;
 			});
@@ -37,10 +37,13 @@ export default class SetupSystem extends Event {
             return;
         } */
 
-		if (clientMember?.voice.channel && clientMember.voice.channelId !== voiceChannel.id) {
+		if (
+			clientMember?.voice.channel &&
+			clientMember.voice.channelId !== voiceChannel.id
+		) {
 			await oops(
 				channel,
-				T(locale, 'event.message.different_voice_channel_queue', {
+				T(locale, "event.message.different_voice_channel_queue", {
 					channel: clientMember.voice.channelId,
 				}),
 			);
@@ -78,5 +81,5 @@ export default class SetupSystem extends Event {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

@@ -1,16 +1,17 @@
-import i18n from 'i18n';
+import i18n from "i18n";
 
-import { Locale } from 'discord.js';
-import defaultLanguage from '../config';
-import { Language } from '../types';
-import Logger from './Logger';
+import { Locale } from "discord.js";
+import defaultLanguage from "../config";
+import { Language } from "../types";
+import Logger from "./Logger";
 
-const logger = new Logger();
+const log = new Logger();
 
 export function initI18n() {
 	i18n.configure({
 		locales: Object.keys(Language),
-		defaultLocale: typeof defaultLanguage === 'string' ? defaultLanguage : 'EnglishUS',
+		defaultLocale:
+			typeof defaultLanguage === "string" ? defaultLanguage : "EnglishUS",
 		directory: `${process.cwd()}/locales`,
 		retryInDefaultLocale: true,
 		objectNotation: true,
@@ -21,17 +22,21 @@ export function initI18n() {
 			return value;
 		},
 		mustacheConfig: {
-			tags: ['{', '}'],
+			tags: ["{", "}"],
 			disable: false,
 		},
 	});
 
-	logger.info('I18n has been initialized');
+	log.info("I18n has been initialized");
 }
 
 export { i18n };
 
-export function T(locale: string, text: string | i18n.TranslateOptions, ...params: any) {
+export function T(
+	locale: string,
+	text: string | i18n.TranslateOptions,
+	...params: any
+) {
 	i18n.setLocale(locale);
 	return i18n.__mf(text, ...params);
 }
@@ -63,5 +68,5 @@ export function descriptionLocalization(name: any, text: any) {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

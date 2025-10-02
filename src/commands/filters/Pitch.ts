@@ -1,16 +1,20 @@
-import { Command, type Context, type Lavamusic } from '../../structures/index.js';
+import {
+	Command,
+	type Context,
+	type Lavamusic,
+} from "../../structures/index.js";
 
 export default class Pitch extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'pitch',
+			name: "pitch",
 			description: {
-				content: 'cmd.pitch.description',
-				examples: ['pitch 1', 'pitch 1.5', 'pitch 1,5'],
-				usage: 'pitch <number>',
+				content: "cmd.pitch.description",
+				examples: ["pitch 1", "pitch 1.5", "pitch 1,5"],
+				usage: "pitch <number>",
 			},
-			category: 'filters',
-			aliases: ['ph'],
+			category: "filters",
+			aliases: ["ph"],
 			cooldown: 3,
 			args: true,
 			vote: false,
@@ -22,25 +26,38 @@ export default class Pitch extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: true,
 			options: [
 				{
-					name: 'pitch',
-					description: 'cmd.pitch.options.pitch',
-					type: 3,
+					name: "pitch",
+					description: "cmd.pitch.options.pitch",
+					// 10 = ApplicationCommandOptionType.Number
+					type: 10,
 					required: true,
 				},
 			],
 		});
 	}
 
-	public async run(client: Lavamusic, ctx: Context, args: string[]): Promise<any> {
-		const player = client.manager.getPlayer(ctx.guild!.id);
-		if (!player) return await ctx.sendMessage(ctx.locale('event.message.no_music_playing'));
-		const pitchString = args[0].replace(',', '.');
+	public async run(
+		client: Lavamusic,
+		ctx: Context,
+		args: string[],
+	): Promise<any> {
+		const player = client.manager.getPlayer(ctx.guild.id);
+		if (!player)
+			return await ctx.sendMessage(
+				ctx.locale("event.message.no_music_playing"),
+			);
+		const pitchString = args[0].replace(",", ".");
 		const isValidNumber = /^[0-9]*\.?[0-9]+$/.test(pitchString);
 		const pitch = Number.parseFloat(pitchString);
 
@@ -48,7 +65,7 @@ export default class Pitch extends Command {
 			await ctx.sendMessage({
 				embeds: [
 					{
-						description: ctx.locale('cmd.pitch.errors.invalid_number'),
+						description: ctx.locale("cmd.pitch.errors.invalid_number"),
 						color: this.client.color.red,
 					},
 				],
@@ -60,7 +77,7 @@ export default class Pitch extends Command {
 		return await ctx.sendMessage({
 			embeds: [
 				{
-					description: ctx.locale('cmd.pitch.messages.pitch_set', {
+					description: ctx.locale("cmd.pitch.messages.pitch_set", {
 						pitch,
 					}),
 					color: this.client.color.main,
@@ -78,5 +95,5 @@ export default class Pitch extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

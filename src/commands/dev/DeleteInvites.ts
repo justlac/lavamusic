@@ -1,16 +1,16 @@
-import { Command, type Context, type Lavamusic } from '../../structures/index';
+import { Command, type Context, type Lavamusic } from "../../structures/index";
 
 export default class DestroyInvites extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'destroyinvites',
+			name: "destroyinvites",
 			description: {
-				content: 'Destroy all invite links created by the bot in a guild',
-				examples: ['destroyinvites 0000000000000000000'],
-				usage: 'destroyinvites <guildId>',
+				content: "Destroy all invite links created by the bot in a guild",
+				examples: ["destroyinvites 0000000000000000000"],
+				usage: "destroyinvites <guildId>",
 			},
-			category: 'dev',
-			aliases: ['di'],
+			category: "dev",
+			aliases: ["di"],
 			cooldown: 3,
 			args: true,
 			player: {
@@ -21,7 +21,12 @@ export default class DestroyInvites extends Command {
 			},
 			permissions: {
 				dev: true,
-				client: ['SendMessages', 'ManageGuild', 'ReadMessageHistory', 'ViewChannel'],
+				client: [
+					"SendMessages",
+					"ManageGuild",
+					"ReadMessageHistory",
+					"ViewChannel",
+				],
 				user: [],
 			},
 			slashCommand: false,
@@ -29,21 +34,29 @@ export default class DestroyInvites extends Command {
 		});
 	}
 
-	public async run(client: Lavamusic, ctx: Context, args: string[]): Promise<any> {
+	public async run(
+		client: Lavamusic,
+		ctx: Context,
+		args: string[],
+	): Promise<any> {
 		const guild = client.guilds.cache.get(args[0]);
 
 		if (!guild) {
-			return await ctx.sendMessage('Guild not found.');
+			return await ctx.sendMessage("Guild not found.");
 		}
 
 		try {
-			const botInvites = (await guild.invites.fetch()).filter(invite => invite.inviter?.id === client.user?.id);
+			const botInvites = (await guild.invites.fetch()).filter(
+				(invite) => invite.inviter?.id === client.user?.id,
+			);
 
-			await Promise.all(botInvites.map(invite => invite.delete()));
+			await Promise.all(botInvites.map((invite) => invite.delete()));
 
-			return await ctx.sendMessage(`Destroyed ${botInvites.size} invite(s) created by the bot.`);
+			return await ctx.sendMessage(
+				`Destroyed ${botInvites.size} invite(s) created by the bot.`,
+			);
 		} catch {
-			return await ctx.sendMessage('Failed to destroy invites.');
+			return await ctx.sendMessage("Failed to destroy invites.");
 		}
 	}
 }
@@ -56,5 +69,5 @@ export default class DestroyInvites extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

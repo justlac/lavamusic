@@ -1,17 +1,17 @@
-import { ChannelType, type TextChannel } from 'discord.js';
-import { Command, type Context, type Lavamusic } from '../../structures/index';
+import { ChannelType, type TextChannel } from "discord.js";
+import { Command, type Context, type Lavamusic } from "../../structures/index";
 
 export default class GuildLeave extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'guildleave',
+			name: "guildleave",
 			description: {
-				content: 'Leave a guild',
-				examples: ['guildleave <guildId>'],
-				usage: 'guildleave <guildId>',
+				content: "Leave a guild",
+				examples: ["guildleave <guildId>"],
+				usage: "guildleave <guildId>",
 			},
-			category: 'dev',
-			aliases: ['gl'],
+			category: "dev",
+			aliases: ["gl"],
 			cooldown: 3,
 			args: true,
 			player: {
@@ -22,7 +22,12 @@ export default class GuildLeave extends Command {
 			},
 			permissions: {
 				dev: true,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: false,
@@ -30,7 +35,11 @@ export default class GuildLeave extends Command {
 		});
 	}
 
-	public async run(client: Lavamusic, ctx: Context, args: string[]): Promise<any> {
+	public async run(
+		client: Lavamusic,
+		ctx: Context,
+		args: string[],
+	): Promise<any> {
 		const guildId = args[0];
 
 		const guild = await client.shard
@@ -41,10 +50,10 @@ export default class GuildLeave extends Command {
 				},
 				{ context: { guildId } },
 			)
-			.then(results => results.find(g => g !== null));
+			.then((results) => results.find((g) => g !== null));
 
 		if (!guild) {
-			return await ctx.sendMessage('Guild not found.');
+			return await ctx.sendMessage("Guild not found.");
 		}
 
 		try {
@@ -66,7 +75,9 @@ export default class GuildLeave extends Command {
 		if (logChannelId) {
 			const logChannel = client.channels.cache.get(logChannelId) as TextChannel;
 			if (logChannel && logChannel.type === ChannelType.GuildText) {
-				await logChannel.send(`Bot has left guild: ${guild.name} (ID: ${guild.id})`);
+				await logChannel.send(
+					`Bot has left guild: ${guild.name} (ID: ${guild.id})`,
+				);
 			}
 		}
 	}
@@ -80,5 +91,5 @@ export default class GuildLeave extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

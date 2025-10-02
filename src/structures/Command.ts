@@ -1,5 +1,9 @@
-import type { APIApplicationCommandOption, PermissionResolvable } from 'discord.js';
-import type Lavamusic from './Lavamusic';
+import type {
+	APIApplicationCommandOption,
+	AutocompleteInteraction,
+	PermissionResolvable,
+} from "discord.js";
+import type Lavamusic from "./Lavamusic";
 
 interface CommandDescription {
 	content: string;
@@ -14,10 +18,12 @@ interface CommandPlayer {
 	djPerm: string | null;
 }
 
+import { PermissionFlagsBits } from "discord.js";
+
 interface CommandPermissions {
 	dev: boolean;
-	client: string[] | PermissionResolvable;
-	user: string[] | PermissionResolvable;
+	client: PermissionResolvable;
+	user: PermissionResolvable;
 }
 
 interface CommandOptions {
@@ -57,9 +63,9 @@ export default class Command {
 		this.name = options.name;
 		this.name_localizations = options.name_localizations ?? {};
 		this.description = {
-			content: options.description?.content ?? 'No description provided',
-			usage: options.description?.usage ?? 'No usage provided',
-			examples: options.description?.examples ?? ['No examples provided'],
+			content: options.description?.content ?? "No description provided",
+			usage: options.description?.usage ?? "No usage provided",
+			examples: options.description?.examples ?? ["No examples provided"],
 		};
 		this.description_localizations = options.description_localizations ?? {};
 		this.aliases = options.aliases ?? [];
@@ -74,15 +80,28 @@ export default class Command {
 		};
 		this.permissions = {
 			dev: options.permissions?.dev ?? false,
-			client: options.permissions?.client ?? ['SendMessages', 'ViewChannel', 'EmbedLinks'],
+			client: options.permissions?.client ?? [
+				PermissionFlagsBits.SendMessages,
+				PermissionFlagsBits.ViewChannel,
+				PermissionFlagsBits.EmbedLinks,
+			],
 			user: options.permissions?.user ?? [],
 		};
 		this.slashCommand = options.slashCommand ?? false;
 		this.options = options.options ?? [];
-		this.category = options.category ?? 'general';
+		this.category = options.category ?? "general";
 	}
 
-	public async run(_client: Lavamusic, _message: any, _args: string[]): Promise<any> {
+	public async run(
+		_client: Lavamusic,
+		_message: any,
+		_args: string[],
+	): Promise<any> {
+		return await Promise.resolve();
+	}
+	public async autocomplete(
+		_interaction: AutocompleteInteraction,
+	): Promise<void> {
 		return await Promise.resolve();
 	}
 }
@@ -95,5 +114,5 @@ export default class Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

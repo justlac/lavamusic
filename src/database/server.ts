@@ -1,15 +1,28 @@
-import { type Dj, type Guild, type Playlist, PrismaClient, type Role, type Setup, type Stay } from '@prisma/client';
-import { env } from '../env';
+import {
+	type Dj,
+	type Guild,
+	type Playlist,
+	PrismaClient,
+	type Role,
+	type Setup,
+	type Stay,
+} from "@prisma/client";
+import { env } from "../env";
 
 export default class ServerData {
+	private static prisma = new PrismaClient();
 	private prisma: PrismaClient;
 
 	constructor() {
-		this.prisma = new PrismaClient();
+		// reuse the singleton
+		this.prisma = ServerData.prisma;
 	}
 
 	public async get(guildId: string): Promise<Guild> {
-		return (await this.prisma.guild.findUnique({ where: { guildId } })) ?? this.createGuild(guildId);
+		return (
+			(await this.prisma.guild.findUnique({ where: { guildId } })) ??
+			this.createGuild(guildId)
+		);
 	}
 
 	private async createGuild(guildId: string): Promise<Guild> {
@@ -34,7 +47,10 @@ export default class ServerData {
 		return guild?.prefix ?? env.PREFIX;
 	}
 
-	public async updateLanguage(guildId: string, language: string): Promise<void> {
+	public async updateLanguage(
+		guildId: string,
+		language: string,
+	): Promise<void> {
 		await this.prisma.guild.update({
 			where: { guildId },
 			data: { language },
@@ -50,7 +66,11 @@ export default class ServerData {
 		return await this.prisma.setup.findUnique({ where: { guildId } });
 	}
 
-	public async setSetup(guildId: string, textId: string, messageId: string): Promise<void> {
+	public async setSetup(
+		guildId: string,
+		textId: string,
+		messageId: string,
+	): Promise<void> {
 		await this.prisma.setup.upsert({
 			where: { guildId },
 			update: { textId, messageId },
@@ -62,7 +82,11 @@ export default class ServerData {
 		await this.prisma.setup.delete({ where: { guildId } });
 	}
 
-	public async set_247(guildId: string, textId: string, voiceId: string): Promise<void> {
+	public async set_247(
+		guildId: string,
+		textId: string,
+		voiceId: string,
+	): Promise<void> {
 		await this.prisma.stay.upsert({
 			where: { guildId },
 			update: { textId, voiceId },
@@ -112,7 +136,10 @@ export default class ServerData {
 		await this.prisma.role.deleteMany({ where: { guildId } });
 	}
 
-	public async getPlaylist(userId: string, name: string): Promise<Playlist | null> {
+	public async getPlaylist(
+		userId: string,
+		name: string,
+	): Promise<Playlist | null> {
 		return await this.prisma.playlist.findUnique({
 			where: { userId_name: { userId, name } },
 		});
@@ -129,7 +156,11 @@ export default class ServerData {
 	}
 
 	// createPlaylist with tracks
-	public async createPlaylistWithTracks(userId: string, name: string, tracks: string[]): Promise<void> {
+	public async createPlaylistWithTracks(
+		userId: string,
+		name: string,
+		tracks: string[],
+	): Promise<void> {
 		await this.prisma.playlist.create({
 			data: {
 				userId,
@@ -150,7 +181,10 @@ export default class ServerData {
 		});
 	}
 
-	public async deleteSongsFromPlaylist(userId: string, playlistName: string): Promise<void> {
+	public async deleteSongsFromPlaylist(
+		userId: string,
+		playlistName: string,
+	): Promise<void> {
 		// Fetch the playlist
 		const playlist = await this.getPlaylist(userId, playlistName);
 
@@ -170,7 +204,11 @@ export default class ServerData {
 		}
 	}
 
-	public async addTracksToPlaylist(userId: string, playlistName: string, tracks: string[]) {
+	public async addTracksToPlaylist(
+		userId: string,
+		playlistName: string,
+		tracks: string[],
+	) {
 		// Serialize the tracks array into a JSON string
 		const tracksJson = JSON.stringify(tracks);
 
@@ -205,7 +243,7 @@ export default class ServerData {
 					},
 				});
 			} else {
-				throw new Error('Existing tracks are not in an array format.');
+				throw new Error("Existing tracks are not in an array format.");
 			}
 		} else {
 			// If no playlist exists, create a new one with the provided tracks
@@ -219,9 +257,14 @@ export default class ServerData {
 		}
 	}
 
-	public async removeSong(userId: string, playlistName: string, encodedSong: string): Promise<void> {
+	public async removeSong(
+		userId: string,
+		playlistName: string,
+		encodedSong: string,
+	): Promise<void> {
 		const playlist = await this.getPlaylist(userId, playlistName);
 		if (playlist) {
+			// biome-ignore lint/style/noNonNullAssertion: playlist.tracks is always set for existing playlists
 			const tracks: string[] = JSON.parse(playlist?.tracks!);
 
 			// Find the index of the song to remove
@@ -261,7 +304,7 @@ export default class ServerData {
 			return null;
 		}
 
-		// Deserialize the tracks JSON string back into an array
+		// biome-ignore lint/style/noNonNullAssertion: playlist.tracks is always set for existing playlists
 		const tracks = JSON.parse(playlist.tracks!);
 		return tracks;
 	}
@@ -275,5 +318,5 @@ export default class ServerData {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

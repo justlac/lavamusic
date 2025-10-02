@@ -11,6 +11,17 @@
 				"enabled": "`✅` | 24/7 mode has been `ENABLED`."
 			}
 		},
+		"fairplay": {
+			"description": "Set the bot to play music fairly",
+			"errors": {
+				"not_in_voice": "You need to be in a voice channel to use this command.",
+				"generic": "An error occurred while trying to execute this command."
+			},
+			"messages": {
+				"disabled": "`✅` | Fairplay mode has been `DISABLED`.",
+				"enabled": "`✅` | Fairplay mode has been `ENABLED`."
+			}
+		},
 		"ping": {
 			"description": "Shows the bot's ping.",
 			"content": "Pinging...",
@@ -139,7 +150,8 @@
 				"high": "`✅` | High bassboost filter has been `ENABLED`.",
 				"low": "`✅` | Low bassboost filter has been `ENABLED`.",
 				"medium": "`✅` | Medium bassboost filter has been `ENABLED`.",
-				"off": "`✅` | Bassboost filter has been `DISABLED`."
+				"off": "`✅` | Bassboost filter has been `DISABLED`.",
+				"invalid_level": "Please provide a valid bassboost level. Available levels: `high`, `medium`, `low`, `off`."
 			}
 		},
 		"distortion": {
@@ -269,12 +281,27 @@
 			"looping_off": "**Looping is now off.**"
 		},
 		"lyrics": {
-			"description": "Get's the lyrics of the currently playing track",
-			"lyrics_track": "### Lyrics for: [{trackTitle}]({trackUrl})\n**`{lyrics}`**",
-			"searching": "`🔍` Searching for **{trackTitle}** lyrics...",
+			"description": "Gets the lyrics of the currently playing track",
+			"lyrics_for_track": "### Lyrics for: [{trackTitle}]({trackUrl})",
+			"no_lyrics_on_page": "No lyrics found on this page.",
+			"searching": "🔍 Searching for **{trackTitle}** lyrics...",
+			"session_expired": "The session has expired. Use the command again to refresh.",
+			"page_indicator": "Page {current}/{total}",
+			"artwork_description": "Artwork for {trackTitle}",
+			"no_lyrics_available": "No lyrics available",
+			"button_subscribe": "📌 Subscribe to Live Lyrics",
+			"button_unsubscribe": "📌 Unsubscribe from Live Lyrics",
+			"subscribed": "You have subscribed to live lyrics updates!",
+			"unsubscribed": "You have unsubscribed from live lyrics updates.",
 			"errors": {
 				"no_results": "No lyrics found for the current track.",
-				"lyrics_error": "An error occurred while getting the lyrics."
+				"lyrics_error": "An error occurred while getting the lyrics.",
+				"no_player_for_lyrics": "Cannot get lyrics for this song without an active player."
+			},
+			"options": {
+				"song": {
+					"description": "The song you want to get lyrics for."
+				}
 			}
 		},
 		"nowplaying": {
@@ -301,6 +328,19 @@
 			"added_to_queue": "Added [{title}]({uri}) to the queue.",
 			"added_playlist_to_queue": "Added {length} songs to the queue."
 		},
+		"playlocal": {
+			"description": "Plays an your local audio files",
+			"options": {
+				"file": "The audio file you want to play"
+			},
+			"loading": "Loading...",
+			"errors": {
+				"empty_query": "Please attach an audio file to play.",
+				"invalid_format": "You can only play MP3, WAV, OGG, FLAC, AAC or M4A files.",
+				"no_results": "Failed to play the audio file. It may be corrupted."
+			},
+			"added_to_queue": "Added [{title}]({url}) to the queue"
+		},
 		"playnext": {
 			"description": "Add the song to play next in queue",
 			"options": {
@@ -322,7 +362,8 @@
 			"live": "LIVE",
 			"track_info": "{index}. [{title}]({uri}) - Requested By: <@{requester}> - Duration: `{duration}`",
 			"title": "Queue",
-			"page_info": "Page {index} of {total}"
+			"page_info": "Page {index} of {total}",
+			"duration": "Queue Duration: `{totalDuration}`"
 		},
 		"remove": {
 			"description": "Removes a song from the queue",
@@ -356,17 +397,29 @@
 			}
 		},
 		"search": {
-			"description": "Searches for a song",
+			"description": "Search for a song",
 			"options": {
-				"song": "The song you want to search"
+				"song": "The song you are looking for"
 			},
-			"select": "Please select the song you want to play",
+			"select": "Select a song from the list...",
 			"errors": {
 				"no_results": "No results found.",
-				"search_error": "There was an error while searching."
+				"no_results_title": "No Search Results Found!",
+				"no_results_description": "I couldn't find any songs matching your query. Try changing keywords or providing a link.",
+				"invalid_selection_title": "Invalid Selection!",
+				"invalid_selection_description": "The selected option is invalid. Please select a song number from the list.",
+				"search_error": "An error occurred while searching for the song.",
+				"vc_connect_fail_title": "Voice channel connection error",
+				"vc_connect_fail_description": "I could not connect to your voice channel. Make sure I have the proper permissions."
 			},
 			"messages": {
-				"added_to_queue": "Added [{title}]({uri}) to the queue."
+				"results_found": "Found **{count}** songs.",
+				"select_prompt": "Select a number to add the song to the queue.",
+				"page_info": "Page {currentPage}/{maxPages}",
+				"added_to_queue": "Added **[{title}]({uri})** to the queue!",
+				"selection_timed_out_title": "Time Expired!",
+				"selection_timed_out_description": "No song was selected within the given time. The search has been canceled. Please try again.",
+				"selection_timed_out_short": "Selection timed out."
 			}
 		},
 		"seek": {
@@ -387,6 +440,9 @@
 			"description": "Shuffles the queue",
 			"messages": {
 				"shuffled": "Shuffled the queue."
+			},
+			"errors": {
+				"fairplay": "Fairplay mode is enabled. You cannot shuffle the queue."
 			}
 		},
 		"skip": {
@@ -447,7 +503,8 @@
 			"messages": {
 				"name_too_long": "Playlist names can only be 50 characters long.",
 				"playlist_exists": "A playlist with that name already exists. Please use a different name.",
-				"playlist_created": "Playlist **{name}** has been created."
+				"playlist_created": "Playlist **{name}** has been created.",
+				"name_empty": "You must provide a playlist name."
 			}
 		},
 		"delete": {
@@ -480,7 +537,8 @@
 			"messages": {
 				"playlist_not_exist": "That playlist doesn't exist.",
 				"playlist_empty": "That playlist is empty.",
-				"playlist_loaded": "Loaded `{name}` with `{count}` songs."
+				"playlist_loaded": "Loaded `{name}` with `{count}` songs.",
+				"no_lavalink_nodes": "There are no available Lavalink nodes to load the playlist."
 			}
 		},
 		"removesong": {
@@ -511,6 +569,34 @@
 				"playlist_stolen": "Successfully stole the playlist `{playlist}` from {user}.",
 				"error_occurred": "An error occurred while stealing the playlist."
 			}
+		},
+		"movenode": {
+			"description": "Move the players to a different Lavalink node",
+			"options": {
+				"node": "The node ID to move the players"
+			},
+			"no_player": "There is no active music player in this server.",
+			"no_available_nodes": "There are no available nodes to move to.",
+			"available_nodes_title": "Available Nodes",
+			"current_node": "Current Node",
+			"available_nodes": "Available Nodes",
+			"usage_hint": "Use: movenode <nodeId>",
+			"node_not_found": "Node `{node}` was not found.",
+			"node_not_connected": "Node `{node}` is not connected.",
+			"same_node": "Player is already on node `{node}`.",
+			"moving": "Moving player from `{from}` to `{to}`...",
+			"success_title": "Player Moved Successfully",
+			"success_description": "Player has been moved from `{from}` to `{to}`.",
+			"error": "Failed to move player: {error}",
+			"moving_all_players": "Moving all players to node `{node}`...",
+			"results_title": "MoveNode Results",
+			"moved_players": "**Moved players in guilds:**\n{list}",
+			"guild_move": "• `{guildId}` ({from} → {to})",
+			"failed_moves": "**Failed to move players in guilds:**\n{list}",
+			"guild_move_failed": "• `{guildId}`: {error}",
+			"no_players_moved": "No players needed to be moved.",
+			"unknown_error": "Unknown error",
+			"no_players": "There are no players to move."
 		}
 	},
 	"buttons": {
@@ -521,6 +607,7 @@
 		"stop": "Stop",
 		"skip": "Skip",
 		"loop": "Loop",
+		"next": "Next",
 		"errors": {
 			"not_author": "You can't use this button."
 		}
@@ -532,7 +619,8 @@
 			"queue_empty": "The queue is empty.",
 			"no_previous": "There are no previous songs in the queue.",
 			"no_song": "There are no songs in the queue.",
-			"already_paused": "The song is already paused."
+			"already_paused": "The song is already paused.",
+			"user_not_in_voice_channel": "You are not connected to a voice channel."
 		},
 		"trackStart": {
 			"now_playing": "Now Playing",
@@ -644,5 +732,6 @@
 	"Evaluate code": "Evaluate code",
 	"Leave a guild": "Leave a guild",
 	"List all guilds the bot is in": "List all guilds the bot is in",
-	"Restart the bot": "Restart the bot"
+	"Restart the bot": "Restart the bot",
+	"The loop mode you want to set": "The loop mode you want to set"
 }

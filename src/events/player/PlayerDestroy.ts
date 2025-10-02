@@ -1,12 +1,12 @@
-import type { TextChannel } from 'discord.js';
-import type { Player } from 'lavalink-client';
-import { Event, type Lavamusic } from '../../structures/index';
-import { updateSetup } from '../../utils/SetupSystem';
+import type { TextChannel } from "discord.js";
+import type { Player } from "lavalink-client";
+import { Event, type Lavamusic } from "../../structures/index";
+import { updateSetup } from "../../utils/SetupSystem";
 
 export default class PlayerDestroy extends Event {
 	constructor(client: Lavamusic, file: string) {
 		super(client, file, {
-			name: 'playerDestroy',
+			name: "playerDestroy",
 		});
 	}
 
@@ -16,10 +16,19 @@ export default class PlayerDestroy extends Event {
 		const locale = await this.client.db.getLanguage(player.guildId);
 		await updateSetup(this.client, guild, locale);
 
-		const messageId = player.get<string | undefined>('messageId');
+		const voiceChannelId =
+			player.voiceChannelId ?? player.options.voiceChannelId;
+
+		if (voiceChannelId) {
+			await this.client.utils.setVoiceStatus(this.client, voiceChannelId, "");
+		}
+
+		const messageId = player.get<string | undefined>("messageId");
 		if (!messageId) return;
 
-		const channel = guild.channels.cache.get(player.textChannelId!) as TextChannel;
+		const channel = guild.channels.cache.get(
+			player.textChannelId!,
+		) as TextChannel;
 		if (!channel) return;
 
 		const message = await channel.messages.fetch(messageId).catch(() => {
@@ -43,5 +52,5 @@ export default class PlayerDestroy extends Event {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

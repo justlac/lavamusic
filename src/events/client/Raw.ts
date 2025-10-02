@@ -1,11 +1,11 @@
-import { Event, type Lavamusic } from '../../structures/index';
+import { Event, type Lavamusic } from "../../structures/index";
 
 export default class Raw extends Event {
 	client: Lavamusic;
 
 	constructor(client: Lavamusic, file: string) {
 		super(client, file, {
-			name: 'raw',
+			name: "raw",
 		});
 		this.client = client;
 	}
@@ -23,5 +23,5 @@ export default class Raw extends Event {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

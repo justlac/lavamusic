@@ -1,16 +1,20 @@
-import { Command, type Context, type Lavamusic } from '../../structures/index.js';
+import {
+	Command,
+	type Context,
+	type Lavamusic,
+} from "../../structures/index.js";
 
 export default class Reset extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'reset',
+			name: "reset",
 			description: {
-				content: 'cmd.reset.description',
-				examples: ['reset'],
-				usage: 'reset',
+				content: "cmd.reset.description",
+				examples: ["reset"],
+				usage: "reset",
 			},
-			category: 'filters',
-			aliases: ['rs'],
+			category: "filters",
+			aliases: ["rs"],
 			cooldown: 3,
 			args: false,
 			vote: false,
@@ -22,7 +26,12 @@ export default class Reset extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: true,
@@ -31,14 +40,17 @@ export default class Reset extends Command {
 	}
 
 	public async run(client: Lavamusic, ctx: Context): Promise<any> {
-		const player = client.manager.getPlayer(ctx.guild!.id);
-		if (!player) return await ctx.sendMessage(ctx.locale('event.message.no_music_playing'));
+		const player = client.manager.getPlayer(ctx.guild.id);
+		if (!player)
+			return await ctx.sendMessage(
+				ctx.locale("event.message.no_music_playing"),
+			);
 		player.filterManager.resetFilters();
 		player.filterManager.clearEQ();
 		await ctx.sendMessage({
 			embeds: [
 				{
-					description: ctx.locale('cmd.reset.messages.filters_reset'),
+					description: ctx.locale("cmd.reset.messages.filters_reset"),
 					color: this.client.color.main,
 				},
 			],
@@ -54,5 +66,5 @@ export default class Reset extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

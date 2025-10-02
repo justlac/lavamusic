@@ -1,18 +1,20 @@
-import { ShardingManager } from 'discord.js';
-import { env } from './env';
-import type Logger from './structures/Logger';
+import { ShardingManager } from "discord.js";
+import { env } from "./env";
+import type Logger from "./structures/Logger";
 
 export async function shardStart(logger: Logger) {
-	const manager = new ShardingManager('./dist/LavaClient.js', {
+	const manager = new ShardingManager("./dist/LavaClient.js", {
 		respawn: true,
 		token: env.TOKEN,
-		totalShards: 'auto',
-		shardList: 'auto',
+		totalShards: "auto",
+		shardList: "auto",
 	});
 
-	manager.on('shardCreate', shard => {
-		shard.on('ready', () => {
-			logger.start(`[CLIENT] Shard ${shard.id} connected to Discord's Gateway.`);
+	manager.on("shardCreate", (shard) => {
+		shard.on("ready", () => {
+			logger.start(
+				`[CLIENT] Shard ${shard.id} connected to Discord's Gateway.`,
+			);
 		});
 	});
 
@@ -29,5 +31,5 @@ export async function shardStart(logger: Logger) {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

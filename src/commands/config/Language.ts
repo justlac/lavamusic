@@ -1,19 +1,19 @@
-import type { AutocompleteInteraction } from 'discord.js';
-import { env } from '../../env';
-import { Command, type Context, type Lavamusic } from '../../structures/index';
-import { Language, LocaleFlags } from '../../types';
+import type { AutocompleteInteraction } from "discord.js";
+import { env } from "../../env";
+import { Command, type Context, type Lavamusic } from "../../structures/index";
+import { Language, LocaleFlags } from "../../types";
 
 export default class LanguageCommand extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'language',
+			name: "language",
 			description: {
-				content: 'cmd.language.description',
-				examples: ['language set `EnglishUS`', 'language reset'],
-				usage: 'language',
+				content: "cmd.language.description",
+				examples: ["language set `EnglishUS`", "language reset"],
+				usage: "language",
 			},
-			category: 'config',
-			aliases: ['lang'],
+			category: "config",
+			aliases: ["lang"],
 			cooldown: 3,
 			args: true,
 			vote: false,
@@ -25,19 +25,24 @@ export default class LanguageCommand extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
-				user: ['ManageGuild'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
+				user: ["ManageGuild"],
 			},
 			slashCommand: true,
 			options: [
 				{
-					name: 'set',
-					description: 'cmd.language.options.set',
+					name: "set",
+					description: "cmd.language.options.set",
 					type: 1,
 					options: [
 						{
-							name: 'language',
-							description: 'cmd.language.options.language',
+							name: "language",
+							description: "cmd.language.options.language",
 							type: 3,
 							required: true,
 							autocomplete: true,
@@ -45,15 +50,19 @@ export default class LanguageCommand extends Command {
 					],
 				},
 				{
-					name: 'reset',
-					description: 'cmd.language.options.reset',
+					name: "reset",
+					description: "cmd.language.options.reset",
 					type: 1,
 				},
 			],
 		});
 	}
 
-	public async run(client: Lavamusic, ctx: Context, args: string[]): Promise<any> {
+	public async run(
+		client: Lavamusic,
+		ctx: Context,
+		args: string[],
+	): Promise<any> {
 		let subCommand: string | undefined;
 
 		if (ctx.isInteraction) {
@@ -64,15 +73,16 @@ export default class LanguageCommand extends Command {
 
 		const defaultLanguage = env.DEFAULT_LANGUAGE || Language.EnglishUS;
 
-		if (subCommand === 'set') {
+		if (subCommand === "set") {
 			const embed = client.embed().setColor(this.client.color.main);
 
-			const locale = (await client.db.getLanguage(ctx.guild!.id)) || defaultLanguage;
+			const locale =
+				(await client.db.getLanguage(ctx.guild.id)) || defaultLanguage;
 
 			let lang: string;
 
 			if (ctx.isInteraction) {
-				lang = ctx.options.get('language')?.value as string;
+				lang = ctx.options.get("language")?.value as string;
 			} else {
 				lang = args[0];
 			}
@@ -82,14 +92,18 @@ export default class LanguageCommand extends Command {
 					.map(([key, value]) => `${value}:\`${key}\``)
 					.reduce((acc, curr, index) => {
 						if (index % 2 === 0) {
-							return acc + curr + (index === Object.entries(LocaleFlags).length - 1 ? '' : ' ');
+							return (
+								acc +
+								curr +
+								(index === Object.entries(LocaleFlags).length - 1 ? "" : " ")
+							);
 						}
 						return `${acc + curr}\n`;
-					}, '');
+					}, "");
 				return ctx.sendMessage({
 					embeds: [
 						embed.setDescription(
-							ctx.locale('cmd.language.invalid_language', {
+							ctx.locale("cmd.language.invalid_language", {
 								languages: availableLanguages,
 							}),
 						),
@@ -101,7 +115,7 @@ export default class LanguageCommand extends Command {
 				return ctx.sendMessage({
 					embeds: [
 						embed.setDescription(
-							ctx.locale('cmd.language.already_set', {
+							ctx.locale("cmd.language.already_set", {
 								language: lang,
 							}),
 						),
@@ -109,42 +123,50 @@ export default class LanguageCommand extends Command {
 				});
 			}
 
-			await client.db.updateLanguage(ctx.guild!.id, lang);
+			await client.db.updateLanguage(ctx.guild.id, lang);
 			ctx.guildLocale = lang;
 
 			return ctx.sendMessage({
-				embeds: [embed.setDescription(ctx.locale('cmd.language.set', { language: lang }))],
+				embeds: [
+					embed.setDescription(
+						ctx.locale("cmd.language.set", { language: lang }),
+					),
+				],
 			});
 		}
-		if (subCommand === 'reset') {
+		if (subCommand === "reset") {
 			const embed = client.embed().setColor(this.client.color.main);
 
-			const locale = await client.db.getLanguage(ctx.guild!.id);
+			const locale = await client.db.getLanguage(ctx.guild.id);
 
 			if (!locale) {
 				return ctx.sendMessage({
-					embeds: [embed.setDescription(ctx.locale('cmd.language.not_set'))],
+					embeds: [embed.setDescription(ctx.locale("cmd.language.not_set"))],
 				});
 			}
 
-			await client.db.updateLanguage(ctx.guild!.id, defaultLanguage);
+			await client.db.updateLanguage(ctx.guild.id, defaultLanguage);
 			ctx.guildLocale = defaultLanguage;
 
 			return ctx.sendMessage({
-				embeds: [embed.setDescription(ctx.locale('cmd.language.reset'))],
+				embeds: [embed.setDescription(ctx.locale("cmd.language.reset"))],
 			});
 		}
 	}
 
-	public async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
+	public async autocomplete(
+		interaction: AutocompleteInteraction,
+	): Promise<void> {
 		const focusedValue = interaction.options.getFocused();
 
-		const languages = Object.values(Language).map(language => ({
+		const languages = Object.values(Language).map((language) => ({
 			name: language,
 			value: language,
 		}));
 
-		const filtered = languages.filter(language => language.name.toLowerCase().includes(focusedValue.toLowerCase()));
+		const filtered = languages.filter((language) =>
+			language.name.toLowerCase().includes(focusedValue.toLowerCase()),
+		);
 
 		await interaction.respond(filtered.slice(0, 25)).catch(console.error);
 	}
@@ -158,5 +180,5 @@ export default class LanguageCommand extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

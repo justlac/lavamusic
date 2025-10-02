@@ -1,15 +1,15 @@
-const { exec } = require('node:child_process');
+const { spawn } = require("node:child_process");
 
 async function startLavamusic() {
-	exec('npm start', (error, stdout, stderr) => {
-		if (error) {
-			console.error(`Error starting Lavamusic: ${error}`);
-			return;
-		}
-		if (stderr) {
-			console.error(`Error starting Lavamusic: ${stderr}`);
-		}
-	});
+    const child = spawn("npm", ["start"], {
+        stdio: "inherit",
+        shell: true,
+        detached: true,
+    });
+    child.on("error", (err) => {
+        console.error(`Failed to start Lavamusic: ${err.message}`);
+    });
+    child.unref();
 }
 
 setTimeout(startLavamusic, 5000);
@@ -22,5 +22,5 @@ setTimeout(startLavamusic, 5000);
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

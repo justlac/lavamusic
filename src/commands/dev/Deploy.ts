@@ -4,22 +4,22 @@ import {
 	type ButtonInteraction,
 	ButtonStyle,
 	ComponentType,
+	MessageFlags,
 	type Message,
-	type TextChannel,
-} from 'discord.js';
-import { Command, type Context, type Lavamusic } from '../../structures/index';
+} from "discord.js";
+import { Command, type Context, type Lavamusic } from "../../structures/index";
 
 export default class Deploy extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'deploy',
+			name: "deploy",
 			description: {
-				content: 'Deploy commands',
-				examples: ['deploy'],
-				usage: 'deploy',
+				content: "Deploy commands",
+				examples: ["deploy"],
+				usage: "deploy",
 			},
-			category: 'dev',
-			aliases: ['deploy-commands'],
+			category: "dev",
+			aliases: ["deploy-commands"],
 			cooldown: 3,
 			args: false,
 			player: {
@@ -30,7 +30,12 @@ export default class Deploy extends Command {
 			},
 			permissions: {
 				dev: true,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: false,
@@ -38,29 +43,39 @@ export default class Deploy extends Command {
 		});
 	}
 
-	public async run(client: Lavamusic, ctx: Context, _args: string[]): Promise<any> {
+	public async run(
+		client: Lavamusic,
+		ctx: Context,
+		_args: string[],
+	): Promise<any> {
 		const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId('deploy-global').setLabel('Global').setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId('deploy-guild').setLabel('Guild').setStyle(ButtonStyle.Secondary),
+			new ButtonBuilder()
+				.setCustomId("deploy-global")
+				.setLabel("Global")
+				.setStyle(ButtonStyle.Secondary),
+			new ButtonBuilder()
+				.setCustomId("deploy-guild")
+				.setLabel("Guild")
+				.setStyle(ButtonStyle.Secondary),
 		);
 
 		let msg: Message | undefined;
 		try {
 			msg = await ctx.sendMessage({
-				content: 'Where do you want to deploy the commands?',
+				content: "Where do you want to deploy the commands?",
 				components: [row],
 			});
 		} catch (error) {
-			client.logger.error('Failed to send the initial message:', error);
+			client.logger.error("Failed to send the initial message:", error);
 			return;
 		}
 
-		const filter = (interaction: ButtonInteraction<'cached'>) => {
+		const filter = (interaction: ButtonInteraction) => {
 			if (interaction.user.id !== ctx.author?.id) {
 				interaction
 					.reply({
 						content: "You can't interact with this message",
-						ephemeral: true,
+						flags: MessageFlags.Ephemeral,
 					})
 					.catch(client.logger.error);
 				return false;
@@ -68,38 +83,43 @@ export default class Deploy extends Command {
 			return true;
 		};
 
-		const collector = (ctx.channel as TextChannel).createMessageComponentCollector({
-			filter,
+		const collector = msg!.createMessageComponentCollector({
+			filter: (interaction) => {
+				if (interaction.message.id !== msg!.id) return false;
+				return filter(interaction);
+			},
 			componentType: ComponentType.Button,
 			time: 30000,
 		});
 
-		collector.on('collect', async interaction => {
+		collector.on("collect", async (interaction) => {
 			try {
-				if (interaction.customId === 'deploy-global') {
+				if (interaction.customId === "deploy-global") {
+					await interaction.deferUpdate(); // acknowledge first
 					await client.deployCommands();
 					await ctx.editMessage({
-						content: 'Commands deployed globally.',
+						content: "Commands deployed globally.",
 						components: [],
 					});
-				} else if (interaction.customId === 'deploy-guild') {
+				} else if (interaction.customId === "deploy-guild") {
+					await interaction.deferUpdate(); // acknowledge first
 					await client.deployCommands(interaction.guild!.id);
 					await ctx.editMessage({
-						content: 'Commands deployed in this guild.',
+						content: "Commands deployed in this guild.",
 						components: [],
 					});
 				}
 			} catch (error) {
-				client.logger.error('Failed to handle interaction:', error);
+				client.logger.error("Failed to handle interaction:", error);
 			}
 		});
 
-		collector.on('end', async (_collected, reason) => {
-			if (reason === 'time' && msg) {
+		collector.on("end", async (_collected, reason) => {
+			if (reason === "time" && msg) {
 				try {
 					await msg.delete();
 				} catch (error) {
-					client.logger.error('Failed to delete the message:', error);
+					client.logger.error("Failed to delete the message:", error);
 				}
 			}
 		});
@@ -114,5 +134,5 @@ export default class Deploy extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

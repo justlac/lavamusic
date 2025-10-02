@@ -1,16 +1,16 @@
-import { Command, type Context, type Lavamusic } from '../../structures/index';
+import { Command, type Context, type Lavamusic } from "../../structures/index";
 
 export default class GetPlaylists extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'list',
+			name: "list",
 			description: {
-				content: 'cmd.list.description',
-				examples: ['list', 'list @user'],
-				usage: 'list [@user]',
+				content: "cmd.list.description",
+				examples: ["list", "list @user"],
+				usage: "list [@user]",
 			},
-			category: 'playlist',
-			aliases: ['lst'],
+			category: "playlist",
+			aliases: ["lst"],
 			cooldown: 3,
 			args: false,
 			vote: false,
@@ -22,14 +22,19 @@ export default class GetPlaylists extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: true,
 			options: [
 				{
-					name: 'user',
-					description: 'cmd.list.options.user',
+					name: "user",
+					description: "cmd.list.options.user",
 					type: 6,
 					required: false,
 				},
@@ -42,10 +47,10 @@ export default class GetPlaylists extends Command {
 			let userId: string | undefined;
 			let targetUser = ctx.args[0];
 
-			if (targetUser?.startsWith('<@') && targetUser.endsWith('>')) {
+			if (targetUser?.startsWith("<@") && targetUser.endsWith(">")) {
 				targetUser = targetUser.slice(2, -1);
 
-				if (targetUser.startsWith('!')) {
+				if (targetUser.startsWith("!")) {
 					targetUser = targetUser.slice(1);
 				}
 
@@ -56,7 +61,9 @@ export default class GetPlaylists extends Command {
 					targetUser = await client.users.fetch(targetUser);
 					userId = targetUser.id;
 				} catch (_error) {
-					const users = client.users.cache.filter(user => user.username.toLowerCase() === targetUser.toLowerCase());
+					const users = client.users.cache.filter(
+						(user) => user.username.toLowerCase() === targetUser.toLowerCase(),
+					);
 
 					if (users.size > 0) {
 						targetUser = users.first();
@@ -65,7 +72,7 @@ export default class GetPlaylists extends Command {
 						return await ctx.sendMessage({
 							embeds: [
 								{
-									description: ctx.locale('cmd.list.messages.invalid_username'),
+									description: ctx.locale("cmd.list.messages.invalid_username"),
 									color: this.client.color.red,
 								},
 							],
@@ -81,7 +88,7 @@ export default class GetPlaylists extends Command {
 				return await ctx.sendMessage({
 					embeds: [
 						{
-							description: ctx.locale('cmd.list.messages.invalid_userid'),
+							description: ctx.locale("cmd.list.messages.invalid_userid"),
 							color: this.client.color.red,
 						},
 					],
@@ -94,19 +101,25 @@ export default class GetPlaylists extends Command {
 				return await ctx.sendMessage({
 					embeds: [
 						{
-							description: ctx.locale('cmd.list.messages.no_playlists'),
+							description: ctx.locale("cmd.list.messages.no_playlists"),
 							color: this.client.color.red,
 						},
 					],
 				});
 			}
 
-			const targetUsername = targetUser ? targetUser.username : ctx.locale('cmd.list.messages.your');
+			const targetUsername = targetUser
+				? targetUser.username
+				: ctx.locale("cmd.list.messages.your");
 			return await ctx.sendMessage({
 				embeds: [
 					{
-						title: ctx.locale('cmd.list.messages.playlists_title', { username: targetUsername }),
-						description: playlists.map((playlist: any) => playlist.name).join('\n'),
+						title: ctx.locale("cmd.list.messages.playlists_title", {
+							username: targetUsername,
+						}),
+						description: playlists
+							.map((playlist: any) => playlist.name)
+							.join("\n"),
 						color: this.client.color.main,
 					},
 				],
@@ -116,7 +129,7 @@ export default class GetPlaylists extends Command {
 			return await ctx.sendMessage({
 				embeds: [
 					{
-						description: ctx.locale('cmd.list.messages.error'),
+						description: ctx.locale("cmd.list.messages.error"),
 						color: this.client.color.red,
 					},
 				],
@@ -133,5 +146,5 @@ export default class GetPlaylists extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

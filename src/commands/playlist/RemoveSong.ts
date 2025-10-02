@@ -1,17 +1,17 @@
-import type { AutocompleteInteraction } from 'discord.js';
-import { Command, type Context, type Lavamusic } from '../../structures/index';
+import type { AutocompleteInteraction } from "discord.js";
+import { Command, type Context, type Lavamusic } from "../../structures/index";
 
 export default class RemoveSong extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'removesong',
+			name: "removesong",
 			description: {
-				content: 'cmd.removesong.description',
-				examples: ['removesong <playlist> <song>'],
-				usage: 'removesong <playlist> <song>',
+				content: "cmd.removesong.description",
+				examples: ["removesong <playlist> <song>"],
+				usage: "removesong <playlist> <song>",
 			},
-			category: 'playlist',
-			aliases: ['rs'],
+			category: "playlist",
+			aliases: ["rs"],
 			cooldown: 3,
 			args: true,
 			vote: true,
@@ -23,21 +23,26 @@ export default class RemoveSong extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: true,
 			options: [
 				{
-					name: 'playlist',
-					description: 'cmd.removesong.options.playlist',
+					name: "playlist",
+					description: "cmd.removesong.options.playlist",
 					type: 3,
 					required: true,
 					autocomplete: true,
 				},
 				{
-					name: 'song',
-					description: 'cmd.removesong.options.song',
+					name: "song",
+					description: "cmd.removesong.options.song",
 					type: 3,
 					required: true,
 				},
@@ -45,14 +50,18 @@ export default class RemoveSong extends Command {
 		});
 	}
 
-	public async run(client: Lavamusic, ctx: Context, args: string[]): Promise<any> {
+	public async run(
+		client: Lavamusic,
+		ctx: Context,
+		args: string[],
+	): Promise<any> {
 		const playlist = args.shift();
-		const song = args.join(' ');
+		const song = args.join(" ");
 
 		if (!playlist) {
 			const errorMessage = this.client
 				.embed()
-				.setDescription(ctx.locale('cmd.removesong.messages.provide_playlist'))
+				.setDescription(ctx.locale("cmd.removesong.messages.provide_playlist"))
 				.setColor(this.client.color.red);
 			return await ctx.sendMessage({ embeds: [errorMessage] });
 		}
@@ -60,7 +69,7 @@ export default class RemoveSong extends Command {
 		if (!song) {
 			const errorMessage = this.client
 				.embed()
-				.setDescription(ctx.locale('cmd.removesong.messages.provide_song'))
+				.setDescription(ctx.locale("cmd.removesong.messages.provide_song"))
 				.setColor(this.client.color.red);
 			return await ctx.sendMessage({ embeds: [errorMessage] });
 		}
@@ -70,55 +79,65 @@ export default class RemoveSong extends Command {
 		if (!playlistData) {
 			const playlistNotFoundError = this.client
 				.embed()
-				.setDescription(ctx.locale('cmd.removesong.messages.playlist_not_exist'))
+				.setDescription(
+					ctx.locale("cmd.removesong.messages.playlist_not_exist"),
+				)
 				.setColor(this.client.color.red);
 			return await ctx.sendMessage({ embeds: [playlistNotFoundError] });
 		}
 
-		/* const res = await client.queue.search(song);
+		const res = await client.manager.search(song, ctx.author);
 
-        if (!res || res.loadType !== LoadType.TRACK) {
-            const noSongsFoundError = this.client
-                .embed()
-                .setDescription(ctx.locale("cmd.removesong.messages.song_not_found"))
-                .setColor(this.client.color.red);
-            return await ctx.sendMessage({ embeds: [noSongsFoundError] });
-        }
+		if (!res || (res.loadType !== "track" && res.loadType !== "search")) {
+			const noSongsFoundError = this.client
+				.embed()
+				.setDescription(ctx.locale("cmd.removesong.messages.song_not_found"))
+				.setColor(this.client.color.red);
+			return await ctx.sendMessage({ embeds: [noSongsFoundError] });
+		}
 
-        const trackToRemove = res.data;
+		const trackToRemove = res.tracks[0];
 
-        try {
-            await client.db.removeSong(ctx.author.id, playlist, trackToRemove.encoded);
+		try {
+			await client.db.removeSong(
+				ctx.author!.id,
+				playlist,
+				trackToRemove.encoded!,
+			);
 
-            const successMessage = this.client
-                .embed()
-                .setDescription(
-                    ctx.locale("cmd.removesong.messages.song_removed", {
-                        song: trackToRemove.info.title,
-                        playlist: playlistData.name,
-                    }),
-                )
-                .setColor(this.client.color.green);
-            await ctx.sendMessage({ embeds: [successMessage] });
-        } catch (error) {
-            console.error(error);
-            const genericError = this.client
-                .embed()
-                .setDescription(ctx.locale("cmd.removesong.messages.error_occurred"))
-                .setColor(this.client.color.red);
-            return await ctx.sendMessage({ embeds: [genericError] });
-        } */
+			const successMessage = this.client
+				.embed()
+				.setDescription(
+					ctx.locale("cmd.removesong.messages.song_removed", {
+						song: trackToRemove.info.title,
+						playlist: playlistData.name,
+					}),
+				)
+				.setColor(this.client.color.green);
+			await ctx.sendMessage({ embeds: [successMessage] });
+		} catch (error) {
+			console.error(error);
+			const genericError = this.client
+				.embed()
+				.setDescription(ctx.locale("cmd.removesong.messages.error_occurred"))
+				.setColor(this.client.color.red);
+			return await ctx.sendMessage({ embeds: [genericError] });
+		}
 	}
-	public async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
+	public async autocomplete(
+		interaction: AutocompleteInteraction,
+	): Promise<void> {
 		const focusedValue = interaction.options.getFocused();
 		const userId = interaction.user.id;
 
 		const playlists = await this.client.db.getUserPlaylists(userId);
 
-		const filtered = playlists.filter(playlist => playlist.name.toLowerCase().startsWith(focusedValue.toLowerCase()));
+		const filtered = playlists.filter((playlist) =>
+			playlist.name.toLowerCase().startsWith(focusedValue.toLowerCase()),
+		);
 
 		await interaction.respond(
-			filtered.map(playlist => ({
+			filtered.slice(0, 25).map((playlist) => ({
 				name: playlist.name,
 				value: playlist.name,
 			})),
@@ -134,5 +153,5 @@ export default class RemoveSong extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

@@ -1,16 +1,16 @@
-import { Command, type Context, type Lavamusic } from '../../structures/index';
+import { Command, type Context, type Lavamusic } from "../../structures/index";
 
 export default class Ping extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'ping',
+			name: "ping",
 			description: {
-				content: 'cmd.ping.description',
-				examples: ['ping'],
-				usage: 'ping',
+				content: "cmd.ping.description",
+				examples: ["ping"],
+				usage: "ping",
 			},
-			category: 'general',
-			aliases: ['pong'],
+			category: "general",
+			aliases: ["pong"],
 			cooldown: 3,
 			args: false,
 			vote: false,
@@ -22,7 +22,12 @@ export default class Ping extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+				],
 				user: [],
 			},
 			slashCommand: true,
@@ -31,42 +36,42 @@ export default class Ping extends Command {
 	}
 
 	public async run(client: Lavamusic, ctx: Context): Promise<any> {
-		const msg = await ctx.sendDeferMessage(ctx.locale('cmd.ping.content'));
+		// Send a deferred message
+		const startTime = Date.now();
+		const msg = await ctx.sendDeferMessage(ctx.locale("cmd.ping.content"));
 
-		const botLatency = msg.createdTimestamp - ctx.createdTimestamp;
+		// Calculate latencies
+		const botLatency = Date.now() - startTime;
 		const apiLatency = Math.round(ctx.client.ws.ping);
 
-		const botLatencySign = botLatency < 600 ? '+' : '-';
-		const apiLatencySign = apiLatency < 500 ? '+' : '-';
-
+		// Embed styling
 		const embed = this.client
 			.embed()
 			.setAuthor({
-				name: 'Pong',
+				name: "Pong!",
 				iconURL: client.user?.displayAvatarURL(),
 			})
 			.setColor(this.client.color.main)
 			.addFields([
 				{
-					name: ctx.locale('cmd.ping.bot_latency'),
-					value: `\`\`\`diff\n${botLatencySign} ${botLatency}ms\n\`\`\``,
+					name: ctx.locale("cmd.ping.bot_latency"),
+					value: `\`\`\`diff\n+ ${botLatency}ms\n\`\`\``, // Always positive latency
 					inline: true,
 				},
 				{
-					name: ctx.locale('cmd.ping.api_latency'),
-					value: `\`\`\`diff\n${apiLatencySign} ${apiLatency}ms\n\`\`\``,
+					name: ctx.locale("cmd.ping.api_latency"),
+					value: `\`\`\`diff\n+ ${apiLatency}ms\n\`\`\``, // Always positive latency
 					inline: true,
 				},
 			])
 			.setFooter({
-				text: ctx.locale('cmd.ping.requested_by', {
-					author: ctx.author?.tag,
-				}),
+				text: ctx.locale("cmd.ping.requested_by", { author: ctx.author?.tag }),
 				iconURL: ctx.author?.displayAvatarURL({}),
 			})
 			.setTimestamp();
 
-		return await ctx.editMessage({ content: '', embeds: [embed] });
+		// Send back the result
+		return await ctx.editMessage({ content: "", embeds: [embed] });
 	}
 }
 
@@ -78,5 +83,5 @@ export default class Ping extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

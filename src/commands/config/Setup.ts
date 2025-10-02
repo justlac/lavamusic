@@ -1,18 +1,19 @@
-import { ChannelType, OverwriteType, PermissionFlagsBits } from 'discord.js';
-import { Command, type Context, type Lavamusic } from '../../structures/index';
-import { getButtons } from '../../utils/Buttons';
+/** biome-ignore-all lint/style/noNonNullAssertion: explanation */
+import { ChannelType, OverwriteType, PermissionFlagsBits } from "discord.js";
+import { Command, type Context, type Lavamusic } from "../../structures/index";
+import { getButtons } from "../../utils/Buttons";
 
 export default class Setup extends Command {
 	constructor(client: Lavamusic) {
 		super(client, {
-			name: 'setup',
+			name: "setup",
 			description: {
-				content: 'cmd.setup.description',
-				examples: ['setup create', 'setup delete', 'setup info'],
-				usage: 'setup',
+				content: "cmd.setup.description",
+				examples: ["setup create", "setup delete", "setup info"],
+				usage: "setup",
 			},
-			category: 'config',
-			aliases: ['set'],
+			category: "config",
+			aliases: ["set"],
 			cooldown: 3,
 			args: true,
 			vote: true,
@@ -24,41 +25,53 @@ export default class Setup extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: ['SendMessages', 'ReadMessageHistory', 'ViewChannel', 'EmbedLinks', 'ManageChannels'],
-				user: ['ManageGuild'],
+				client: [
+					"SendMessages",
+					"ReadMessageHistory",
+					"ViewChannel",
+					"EmbedLinks",
+					"ManageChannels",
+				],
+				user: ["ManageGuild"],
 			},
 			slashCommand: true,
 			options: [
 				{
-					name: 'create',
-					description: 'cmd.setup.options.create',
+					name: "create",
+					description: "cmd.setup.options.create",
 					type: 1,
 				},
 				{
-					name: 'delete',
-					description: 'cmd.setup.options.delete',
+					name: "delete",
+					description: "cmd.setup.options.delete",
 					type: 1,
 				},
 				{
-					name: 'info',
-					description: 'cmd.setup.options.info',
+					name: "info",
+					description: "cmd.setup.options.info",
 					type: 1,
 				},
 			],
 		});
 	}
 
-	public async run(client: Lavamusic, ctx: Context, args: string[]): Promise<any> {
-		const subCommand = ctx.isInteraction ? ctx.options.getSubCommand() : args[0];
+	public async run(
+		client: Lavamusic,
+		ctx: Context,
+		args: string[],
+	): Promise<any> {
+		const subCommand = ctx.isInteraction
+			? ctx.options.getSubCommand()
+			: args[0];
 		const embed = client.embed().setColor(this.client.color.main);
 		switch (subCommand) {
-			case 'create': {
-				const data = await client.db.getSetup(ctx.guild!.id);
+			case "create": {
+				const data = await client.db.getSetup(ctx.guild.id);
 				if (data?.textId && data.messageId) {
 					return await ctx.sendMessage({
 						embeds: [
 							{
-								description: ctx.locale('cmd.setup.errors.channel_exists'),
+								description: ctx.locale("cmd.setup.errors.channel_exists"),
 								color: client.color.red,
 							},
 						],
@@ -67,7 +80,7 @@ export default class Setup extends Command {
 				const textChannel = await ctx.guild.channels.create({
 					name: `${client.user?.username}-song-requests`,
 					type: ChannelType.GuildText,
-					topic: 'Song requests for the music bot.',
+					topic: "Song requests for the music bot.",
 					permissionOverwrites: [
 						{
 							type: OverwriteType.Member,
@@ -90,43 +103,45 @@ export default class Setup extends Command {
 						},
 					],
 				});
-				const player = this.client.manager.getPlayer(ctx.guild!.id);
+				const player = this.client.manager.getPlayer(ctx.guild.id);
 				const image = this.client.config.links.img;
 				const desc = player?.queue.current
 					? `[${player.queue.current.info.title}](${player.queue.current.info.uri})`
-					: ctx.locale('player.setupStart.nothing_playing');
+					: ctx.locale("player.setupStart.nothing_playing");
 				embed.setDescription(desc).setImage(image);
 				await textChannel
 					.send({
 						embeds: [embed],
-						components: getButtons(player!, client),
+						components: getButtons(player as any, client),
 					})
-					.then(msg => {
-						client.db.setSetup(ctx.guild!.id, textChannel.id, msg.id);
+					.then((msg) => {
+						client.db.setSetup(ctx.guild.id, textChannel.id, msg.id);
 					});
 				await ctx.sendMessage({
 					embeds: [
 						{
-							description: ctx.locale('cmd.setup.messages.channel_created', { channelId: textChannel.id }),
+							description: ctx.locale("cmd.setup.messages.channel_created", {
+								channelId: textChannel.id,
+							}),
 							color: this.client.color.main,
 						},
 					],
 				});
 				break;
 			}
-			case 'delete': {
-				const data2 = await client.db.getSetup(ctx.guild!.id);
+			case "delete": {
+				const data2 = await client.db.getSetup(ctx.guild.id);
 				if (!data2) {
 					return await ctx.sendMessage({
 						embeds: [
 							{
-								description: ctx.locale('cmd.setup.errors.channel_not_exists'),
+								description: ctx.locale("cmd.setup.errors.channel_not_exists"),
 								color: client.color.red,
 							},
 						],
 					});
 				}
-				client.db.deleteSetup(ctx.guild!.id);
+				client.db.deleteSetup(ctx.guild.id);
 				const textChannel = ctx.guild.channels.cache.get(data2.textId);
 				if (textChannel)
 					await textChannel.delete().catch(() => {
@@ -135,20 +150,20 @@ export default class Setup extends Command {
 				await ctx.sendMessage({
 					embeds: [
 						{
-							description: ctx.locale('cmd.setup.messages.channel_deleted'),
+							description: ctx.locale("cmd.setup.messages.channel_deleted"),
 							color: this.client.color.main,
 						},
 					],
 				});
 				break;
 			}
-			case 'info': {
-				const data3 = await client.db.getSetup(ctx.guild!.id);
+			case "info": {
+				const data3 = await client.db.getSetup(ctx.guild.id);
 				if (!data3) {
 					return await ctx.sendMessage({
 						embeds: [
 							{
-								description: ctx.locale('cmd.setup.errors.channel_not_exists'),
+								description: ctx.locale("cmd.setup.errors.channel_not_exists"),
 								color: client.color.red,
 							},
 						],
@@ -157,7 +172,7 @@ export default class Setup extends Command {
 				const channel = ctx.guild.channels.cache.get(data3.textId);
 				if (channel) {
 					embed.setDescription(
-						ctx.locale('cmd.setup.messages.channel_info', {
+						ctx.locale("cmd.setup.messages.channel_info", {
 							channelId: channel.id,
 						}),
 					);
@@ -166,7 +181,7 @@ export default class Setup extends Command {
 					await ctx.sendMessage({
 						embeds: [
 							{
-								description: ctx.locale('cmd.setup.errors.channel_not_exists'),
+								description: ctx.locale("cmd.setup.errors.channel_not_exists"),
 								color: client.color.red,
 							},
 						],
@@ -188,5 +203,5 @@ export default class Setup extends Command {
  * Copyright (c) 2024. All rights reserved.
  * This code is the property of Coder and may not be reproduced or
  * modified without permission. For more information, contact us at
- * https://discord.gg/ns8CTk9J3e
+ * https://discord.gg/YQsGbTwPBx
  */

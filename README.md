@@ -7,13 +7,13 @@
 [![Issues][issues-shield]][issues-url]
 [![Support Server][support-shield]][support-server]
 [![MIT License][license-shield]][license-url]
-[![Run on Repl.it](https://repl.it/badge/github/appujet/lavamusic)](https://repl.it/github/appujet/lavamusic)
-[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/import/github/appujet/lavamusic)
+[![Run on Repl.it](https://repl.it/badge/github/c0ders-io/lavamusic)](https://repl.it/github/c0ders-io/lavamusic)
+[![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/import/github/c0ders-io/lavamusic)
 
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
-  <a href="https://github.com/appujet/lavamusic">
+  <a href="https://github.com/c0ders-io/lavamusic">
     <img src="https://cdn.discordapp.com/avatars/875635121770889257/adc4fd956872a72814b70448d1fddd40.webp?size=512" alt="lavamusic" width="200" height="200">
   </a>
 
@@ -21,9 +21,9 @@
   <p align="center">Lavamusic is a Discord music bot that uses Discord.js, lavalink-client, and TypeScript.
     <br />
     <br />
-    <a href="https://discord.com/oauth2/authorize?client_id=875635121770889257&scope=bot+applications.commands&permissions=8">Invite Lavamusic</a>
+    <a href="https://discord.com/oauth2/authorize?client_id=1343814433134346241&permissions=279209954560&response_type=code&redirect_uri=https%3A%2F%2Fdiscord.gg%2Fkhfw8z6gg9&integration_type=0&scope=bot+guilds+applications.commands">Invite Lavamusic</a>
     ·
-    <a href="https://github.com/appujet/lavamusic/issues">Report Bug & Request Feature</a>
+    <a href="https://github.com/appujet/c0ders-io/issues">Report Bug & Request Feature</a>
   </p>
 </p>
 
@@ -76,13 +76,13 @@
 [LavaSrc]: https://github.com/topi314/LavaSrc
 [skybot-lavalink-plugin]: https://github.com/DuncteBot/skybot-lavalink-plugin
 [youtube-source]: https://github.com/lavalink-devs/youtube-source
-[jiosaavn]: https://github.com/appujet/jiosaavn-plugin
+[jiosaavn]: https://github.com/c0ders-io/jiosaavn-plugin
 
 To Setup a Lavalink server on Windows, Linux, or Replit, [Click Here!](https://github.com/LucasB25/lavalink-server)
 
 ### **Need help with plugins?**
 
-Join our [Discord Server](https://discord.gg/YsJCtDuTXp) and ask for help in the `#support` channel!
+Join our [Discord Server](https://discord.gg/YQsGbTwPBx) and ask for help in the `#support` channel!
 
 ## 🔧 Requirements
 
@@ -118,25 +118,31 @@ cd lavamusic
 npm i
 ```
 
-4. Copy the `.env.example` file to `.env` and fill in all required values
+4. Compile:
 
-5. Copy the `example.<The data source you want to use>.schema.prisma` file to `schema.prisma` in `prisma` folder
-Note: If you want to use sqlite, skip this step.
-If you are using a different data source, don't forget to fill in the `DATABASE_URL` value in `.env`.
+```
+npm run build
+```
 
-6. Generate the Prisma client:
+5. Copy the `.env.example` file to `.env` and fill in all required values:
+
+6. Copy the `example.<The data source you want to use>.schema.prisma` file to `schema.prisma` in `prisma` folder
+   Note: If you want to use sqlite, skip this step.
+   If you are using a different data source, don't forget to fill in the `DATABASE_URL` value in `.env`.
+
+7. Generate the Prisma client:
 
 ```bash
 npm run db:push
 ```
 
-7. Run the migrations (Only if you want to migrate your database):
+8. Run the migrations (Only if you want to migrate your database):
 
 ```bash
 npm run db:migrate
 ```
 
-8. Run the bot:
+9. Run the bot:
 
 Note: You can also run `run.bat` to easily run the bot on Windows.
 
@@ -144,15 +150,22 @@ Note: You can also run `run.bat` to easily run the bot on Windows.
 npm start
 ```
 
-9. Invite the bot to your server:
+10. Invite the bot to your server:
 
 Generate an invite link for your bot and invite it to your server using the [Discord Developer Portal](https://discord.com/developers/applications) or [Permissions Calculator](https://discordapi.com/permissions.html).
+
+11. (Optional) Deploy Slash Commands
+
+Make sure that your User ID is listed under `OWNER_IDS` in `.env`. In the Discord server with Lavamusic, run
+
+```
+!deploy
+```
 
 ## 🚀 Installation using Docker Compose
 
 This section assumes you have Docker and Docker Compose installed and running correctly.
-Edit docker-compose.yml and make sure to set the following variables:
-Your .env file should look like this or you can use the .env.example file.
+Copy the `.env.example` file to `.env` and fill in all required values:
 
 ```yaml
 TOKEN="." # Your bot token and remember, don't show everyone your bot token
@@ -162,21 +175,23 @@ OWNER_IDS=["859640640640640640","859640640640640640"] # Your discord id, you can
 GUILD_ID="859640640640640640" # Your server ID (if you want to use it for a single server)
 ```
 
-For more information how to fill all the variables go to this page.
-You do not need to edit anything like the LAVALINK_SERVERS, DATABASE_URL and the ports unless you know what you're doing.
+Then copy `Lavalink/example.application.yml` to `Lavalink/application.yml` and put any Lavalink plugins you want to use in `Lavalink/plugins`.
+
 After saving your changes you can open a terminal and go to the same location as the docker-compose.yml file. Then run the following:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 The above command will start all your services and your bot should be up and running!
 If you want to run it from the console, remove the -d argument.
 
+Now, you can invite the bot to your server.
+
 To update, you only have to type the following:
 
 ```bash
-docker-compose up --force-recreate --build -d
+docker compose up --force-recreate --build -d
 image prune -f
 ```
 
@@ -215,11 +230,11 @@ Thank you for your interest in contributing to Lavamusic! Here are some guidelin
 3. Create detailed and thorough documentation for any new features or changes.
 4. Write and run tests for your code.
 5. Submit a pull request with your changes.
-Your contribution will be reviewed by the project maintainers, and any necessary feedback or changes will be discussed with you. We appreciate your help in making Lavamusic better!
+   Your contribution will be reviewed by the project maintainers, and any necessary feedback or changes will be discussed with you. We appreciate your help in making Lavamusic better!
 
 ## 🔐 License
 
-Distributed under the GPL-3.0 license. See [![LICENSE](https://img.shields.io/github/license/appujet/lavamusic?style=social)](https://github.com/appujet/lavamusic/blob/main/LICENSE) for more information [READ](https://discord.com/channels/942117923001098260/942120006219624469/1278087961774129314).
+Distributed under the GPL-3.0 license. See [![LICENSE](https://img.shields.io/github/license/appujet/lavamusic?style=social)](https://github.com/c0ders-io/lavamusic/blob/main/LICENSE) for more information [READ](https://discord.com/channels/942117923001098260/942120006219624469/1278087961774129314).
 
 ## ☕ Donate
 
@@ -229,20 +244,20 @@ Do you like this project? Support it by donating!
 ## 👥 Contributors
 
 Thanks go to these wonderful people:
-<a href="https://github.com/appujet/lavamusic/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=appujet/lavamusic" />
+<a href="https://github.com/c0ders-io/lavamusic/graphs/contributors">
+<img src="https://contrib.rocks/image?repo=c0ders-io/lavamusic" />
 </a>
 
-[version-shield]: https://img.shields.io/github/package-json/v/appujet/lavamusic?style=for-the-badge
-[contributors-shield]: https://img.shields.io/github/contributors/appujet/lavamusic.svg?style=for-the-badge
-[contributors-url]: https://github.com/appujet/lavamusic/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/appujet/lavamusic.svg?style=for-the-badge
-[forks-url]: https://github.com/appujet/lavamusic/network/members
-[stars-shield]: https://img.shields.io/github/stars/appujet/lavamusic.svg?style=for-the-badge
-[stars-url]: https://github.com/appujet/lavamusic/stargazers
-[issues-shield]: https://img.shields.io/github/issues/appujet/lavamusic.svg?style=for-the-badge
-[issues-url]: https://github.com/appujet/lavamusic/issues
-[license-shield]: https://img.shields.io/github/license/appujet/lavamusic.svg?style=for-the-badge
-[license-url]: https://github.com/appujet/lavamusic/blob/master/LICENSE
-[support-server]: https://discord.gg/PMpJnJaHmy
+[version-shield]: https://img.shields.io/github/package-json/v/c0ders-io/lavamusic?style=for-the-badge
+[contributors-shield]: https://img.shields.io/github/contributors/c0ders-io/lavamusic.svg?style=for-the-badge
+[contributors-url]: https://github.com/c0ders-io/lavamusic/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/c0ders-io/lavamusic.svg?style=for-the-badge
+[forks-url]: https://github.com/c0ders-io/lavamusic/network/members
+[stars-shield]: https://img.shields.io/github/stars/c0ders-io/lavamusic.svg?style=for-the-badge
+[stars-url]: https://github.com/c0ders-io/lavamusic/stargazers
+[issues-shield]: https://img.shields.io/github/issues/c0ders-io/lavamusic.svg?style=for-the-badge
+[issues-url]: https://github.com/c0ders-io/lavamusic/issues
+[license-shield]: https://img.shields.io/github/license/c0ders-io/lavamusic.svg?style=for-the-badge
+[license-url]: https://github.com/c0ders-io/lavamusic/blob/master/LICENSE
+[support-server]: https://discord.gg/YQsGbTwPBx
 [support-shield]: https://img.shields.io/discord/942117923001098260.svg?style=for-the-badge&logo=discord&colorB=7289DA
