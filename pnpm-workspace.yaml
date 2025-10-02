@@ -1,2 +1,5 @@
+packages:
+    - "."
+
 ignoredBuiltDependencies:
-  - '@prisma/client'
+    - "@prisma/client"
