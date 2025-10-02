@@ -1,6 +1,52 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: <> */
 import type { Player, Track } from "lavalink-client";
 import type { Requester } from "../../types";
+import { env } from "../../env";
+
+/**
+ * Get similar tracks from Last.fm API
+ * @param artist The artist name
+ * @param track The track name
+ * @returns Array of similar tracks
+ */
+async function getSimilarTracksFromLastFm(
+	artist: string,
+	track: string
+): Promise<Array<{ artist: string; name: string }>> {
+	try {
+		const API_KEY = env.LASTFM_API_KEY;
+		if (!API_KEY) {
+			return [];
+		}
+
+		const encodedArtist = encodeURIComponent(artist);
+		const encodedTrack = encodeURIComponent(track);
+		const url = `https://ws.audioscrobbler.com/2.0/?method=track.getsimilar&artist=${encodedArtist}&track=${encodedTrack}&api_key=${API_KEY}&format=json&limit=10`;
+
+		const response = await fetch(url);
+		const data = await response.json();
+
+		if (data.similartracks && data.similartracks.track) {
+			const tracks = Array.isArray(data.similartracks.track)
+				? data.similartracks.track
+				: [data.similartracks.track];
+
+			const similarTracks = tracks
+				.filter((t: any) => t.artist && t.name)
+				.map((t: any) => ({
+					artist: typeof t.artist === "string" ? t.artist : t.artist.name,
+					name: t.name,
+				}))
+				.slice(0, 10);
+
+			return similarTracks;
+		}
+
+		return [];
+	} catch (error) {
+		return [];
+	}
+}
 
 /**
  * Transforms a requester into a standardized requester object.
@@ -11,11 +57,7 @@ import type { Requester } from "../../types";
  */
 export const requesterTransformer = (requester: any): Requester => {
 	// if it's already the transformed requester
-	if (
-		typeof requester === "object" &&
-		"avatar" in requester &&
-		Object.keys(requester).length === 3
-	)
+	if (typeof requester === "object" && "avatar" in requester && Object.keys(requester).length === 3)
 		return requester as Requester;
 	// if it's still a string
 	if (typeof requester === "object" && "displayAvatarURL" in requester) {
@@ -39,104 +81,92 @@ export const requesterTransformer = (requester: any): Requester => {
  * @param {Track} lastTrack The last played track.
  * @returns {Promise<void>} A promise that resolves when the function is done.
  */
-export async function autoPlayFunction(
-	player: Player,
-	lastTrack?: Track,
-): Promise<void> {
+export async function autoPlayFunction(player: Player, lastTrack?: Track): Promise<void> {
 	if (!player.get("autoplay")) return;
 	if (!lastTrack) return;
 
-	if (lastTrack.info.sourceName === "spotify") {
-		const filtered = player.queue.previous
-			.filter((v) => v.info.sourceName === "spotify")
-			.slice(0, 5);
-		const ids = filtered.map(
-			(v) =>
-				v.info.identifier ||
-				v.info.uri.split("/")?.reverse()?.[0] ||
-				v.info.uri.split("/")?.reverse()?.[1],
-		);
-		if (ids.length >= 2) {
-			const res = await player
-				.search(
-					{
-						query: `seed_tracks=${ids.join(",")}`, //`seed_artists=${artistIds.join(",")}&seed_genres=${genre.join(",")}&seed_tracks=${trackIds.join(",")}`;
-						source: "sprec",
-					},
-					lastTrack.requester,
-				)
-				.then((response: any) => {
-					response.tracks = response.tracks.filter(
-						(v: { info: { identifier: string } }) =>
-							v.info.identifier !== lastTrack.info.identifier,
-					); // remove the lastPlayed track if it's in there..
-					return response;
-				})
-				.catch(console.warn);
-			if (res && res.tracks.length > 0)
-				await player.queue.add(
-					res.tracks
-						.slice(0, 5)
-						.map((track: { pluginInfo: { clientData: any } }) => {
-							// transform the track plugininfo so you can figure out if the track is from autoplay or not.
-							track.pluginInfo.clientData = {
-								...(track.pluginInfo.clientData || {}),
-								fromAutoplay: true,
-							};
-							return track;
-						}),
-				);
-		}
-		return;
-	}
-	if (
-		lastTrack.info.sourceName === "youtube" ||
-		lastTrack.info.sourceName === "youtubemusic"
-	) {
-		const res = await player
-			.search(
-				{
-					query: `https://www.youtube.com/watch?v=${lastTrack.info.identifier}&list=RD${lastTrack.info.identifier}`,
-					source: "youtube",
-				},
-				lastTrack.requester,
-			)
-			.then((response: any) => {
-				response.tracks = response.tracks.filter(
-					(v: { info: { identifier: string } }) =>
-						v.info.identifier !== lastTrack.info.identifier,
-				); // remove the lastPlayed track if it's in there..
-				return response;
+	// Use Last.fm API to get similar tracks for any source
+	const similarTracks = await getSimilarTracksFromLastFm(lastTrack.info.author, lastTrack.info.title);
+
+	if (similarTracks.length > 0) {
+		const searchPromises = similarTracks.slice(0, 10).map(async (track: { artist: string; name: string }) => {
+			try {
+				const searchQuery = `${track.artist} ${track.name}`;
+				const result = await player.search({ query: searchQuery, source: "ytmsearch" }, lastTrack.requester);
+				return result.tracks && result.tracks.length > 0 ? result.tracks[0] : null;
+			} catch {
+				return null;
+			}
+		});
+
+		const foundTracks = (await Promise.all(searchPromises))
+			.filter((track: any) => track !== null)
+			.filter((track: any) => {
+				// Filter out lyrics versions
+				const title = track.info.title.toLowerCase();
+				return !title.includes("lyrics") && !title.includes("lyric");
 			})
-			.catch(console.warn);
-		if (res && res.tracks.length > 0)
-			await player.queue.add(
-				res.tracks
-					.slice(0, 5)
-					.map((track: { pluginInfo: { clientData: any } }) => {
-						// transform the track plugininfo so you can figure out if the track is from autoplay or not.
-						track.pluginInfo.clientData = {
-							...(track.pluginInfo.clientData || {}),
-							fromAutoplay: true,
-						};
-						return track;
-					}),
-			);
-		return;
-	}
-	if (lastTrack.info.sourceName === "jiosaavn") {
-		const res = await player.search(
-			{ query: `jsrec:${lastTrack.info.identifier}`, source: "jsrec" },
-			lastTrack.requester,
-		);
-		if (res.tracks.length > 0) {
-			const track = res.tracks.filter(
-				(v) => v.info.identifier !== lastTrack.info.identifier,
-			)[0];
-			await player.queue.add(track);
+			.slice(0, 10)
+			.map((track: any) => {
+				track.pluginInfo = track.pluginInfo || {};
+				track.pluginInfo.clientData = {
+					...(track.pluginInfo.clientData || {}),
+					fromAutoplay: true,
+				};
+				return track;
+			});
+
+		if (foundTracks.length > 0) {
+			await player.queue.add(foundTracks);
+
+			// Trigger playback if not playing
+			if (!player.playing && player.queue.tracks.length > 0) {
+				await player.play();
+			}
+			return;
 		}
 	}
-	return;
+
+	// Final fallback: search for artist's other popular songs
+	const artistQuery = `${lastTrack.info.author} popular songs`;
+	const fallbackRes = await player
+		.search(
+			{
+				query: artistQuery,
+				source: "ytmsearch",
+			},
+			lastTrack.requester
+		)
+		.catch(() => {
+			return null;
+		});
+
+	if (fallbackRes && fallbackRes.tracks.length > 0) {
+		// Filter and add tracks
+		const cleanedTracks = fallbackRes.tracks
+			.filter((track: any) => {
+				const title = track.info.title.toLowerCase();
+				return !title.includes("lyrics") && !title.includes("lyric");
+			})
+			.slice(0, 3)
+			.map((track: any) => {
+				track.pluginInfo = track.pluginInfo || {};
+				track.pluginInfo.clientData = {
+					...(track.pluginInfo.clientData || {}),
+					fromAutoplay: true,
+				};
+				return track;
+			});
+
+		if (cleanedTracks.length > 0) {
+			await player.queue.add(cleanedTracks);
+
+			// Trigger playback if not playing
+			if (!player.playing && player.queue.tracks.length > 0) {
+				await player.play();
+			}
+		}
+	}
 }
 
 /**
