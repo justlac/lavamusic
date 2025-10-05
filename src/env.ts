@@ -49,6 +49,7 @@ const envSchema = z.object({
 	}, z.enum(["youtube", "youtubemusic", "soundcloud", "spotify", "apple", "deezer", "yandex", "jiosaavn"]).default("youtube")),
 	NODES: z.preprocess((val) => (typeof val === "string" ? JSON.parse(val) : val), z.array(LavalinkNodeSchema)),
 	GENIUS_API: z.string().optional(),
+	GENIUS_API_SECRET: z.string().optional(),
 	LASTFM_API_KEY: z.string().optional(),
 });
 

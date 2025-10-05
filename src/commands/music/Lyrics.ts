@@ -9,7 +9,6 @@ import {
 	SectionBuilder,
 } from "discord.js";
 import { Command, type Context, type Lavamusic } from "../../structures/index";
-import { LyricsLine, LyricsResult } from "lavalink-client";
 
 export default class Lyrics extends Command {
 	constructor(client: Lavamusic) {
@@ -33,13 +32,7 @@ export default class Lyrics extends Command {
 			},
 			permissions: {
 				dev: false,
-				client: [
-					"SendMessages",
-					"ReadMessageHistory",
-					"ViewChannel",
-					"EmbedLinks",
-					"AttachFiles",
-				],
+				client: ["SendMessages", "ReadMessageHistory", "ViewChannel", "EmbedLinks", "AttachFiles"],
 				user: [],
 			},
 			slashCommand: true,
@@ -52,6 +45,69 @@ export default class Lyrics extends Command {
 				},
 			],
 		});
+	}
+
+	// --- Genius Lyrics Fetch Helper ---
+	async fetchLyricsFromGenius(title: string, artist: string, accessToken: string): Promise<string | null> {
+		const query = artist ? `${title} ${artist}` : title;
+		const searchUrl = `https://api.genius.com/search?q=${encodeURIComponent(query)}`;
+
+		let searchRes;
+		try {
+			searchRes = await fetch(searchUrl, {
+				headers: { Authorization: `Bearer ${accessToken}` },
+			});
+		} catch (err) {
+			return null;
+		}
+		if (!searchRes.ok) {
+			return null;
+		}
+		const searchData = await searchRes.json();
+		const hit = searchData.response.hits?.[0]?.result;
+		if (!hit || !hit.url) {
+			return null;
+		}
+
+		let pageRes;
+		try {
+			pageRes = await fetch(hit.url);
+		} catch (err) {
+			return null;
+		}
+		if (!pageRes.ok) {
+			return null;
+		}
+		const pageHtml = await pageRes.text();
+		// Try current Genius structure: data-lyrics-container="true"
+		let matches = [...pageHtml.matchAll(/<div data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/g)];
+		if (!matches.length) {
+			// Fallback to old Lyrics__Container class
+			matches = [...pageHtml.matchAll(/<div class="Lyrics__Container[^>]*>([\s\S]*?)<\/div>/g)];
+		}
+		if (!matches.length) {
+			return null;
+		}
+		const lyrics = matches
+			.map((m) =>
+				m[1]
+					.replace(/<br\s*\/?>(\s*)?/gi, "\n")
+					.replace(/<a[^>]*>/g, "")
+					.replace(/<\/a>/g, "")
+					.replace(/<span[^>]*>/g, "")
+					.replace(/<\/span>/g, "")
+					.replace(/<div[^>]*>/g, "")
+					.replace(/<\/div>/g, "")
+					.replace(/<[^>]+>/g, "")
+					.replace(/&amp;/g, "&")
+					.replace(/&#x27;/g, "'")
+					.replace(/&lt;/g, "<")
+					.replace(/&gt;/g, ">")
+					.replace(/&quot;/g, '"')
+			)
+			.join("\n")
+			.trim();
+		return lyrics.length > 0 ? lyrics : null;
 	}
 
 	public async run(client: Lavamusic, ctx: Context): Promise<any> {
@@ -79,54 +135,45 @@ export default class Lyrics extends Command {
 			const noMusicContainer = new ContainerBuilder()
 				.setAccentColor(client.color.red)
 				.addTextDisplayComponents((textDisplay) =>
-					textDisplay.setContent(ctx.locale("event.message.no_music_playing")),
+					textDisplay.setContent(ctx.locale("event.message.no_music_playing"))
 				);
 			return ctx.sendMessage({
 				components: [noMusicContainer],
 				flags: MessageFlags.IsComponentsV2,
 			});
 		}
-		// If songQuery is given, fetch lyrics for the specified song
+		// Use Genius as the only lyrics source
 		let trackTitle = "";
 		let artistName = "";
 		let trackUrl = "";
 		let artworkUrl = "";
-		let lyricsResult: LyricsResult | string = "";
-		if (songQuery) {
-			const result = await this.fetchTrackAndLyrics({
-				client,
-				ctx,
-				songQuery,
-				player,
-			});
-			if (!result) return;
-			lyricsResult = result.lyricsResult;
-			trackTitle = result.trackTitle;
-			artistName = result.artistName;
-			trackUrl = result.trackUrl;
-			artworkUrl = result.artworkUrl;
-		} else if (player && player.queue.current) {
-			// If no songquery is given, fetch lyrics for the currently playing song
-			lyricsResult = await player.getCurrentLyrics(false);
+		if (player && player.queue.current) {
 			const track = player.queue.current;
-			trackTitle =
-				(track.info.title
-					?.replace(/\[.*?]|\(.*?\)|{.*?}/g, "")
-					.trim() as string) || "Unknown Title";
-			artistName =
-				(track.info.author
-					?.replace(/\[.*?]|\(.*?\)|{.*?}/g, "")
-					.trim() as string) || "Unknown Artist";
-			trackUrl = track.info.uri ?? "about:blank";
+			trackTitle = track.info.title || songQuery;
+			artistName = track.info.author || "";
+			trackUrl = track.info.uri || "";
 			artworkUrl = track.info.artworkUrl || "";
+		} else {
+			trackTitle = songQuery;
 		}
+		const geniusToken = process.env.GENIUS_API || client.env.GENIUS_API;
+		if (!geniusToken) {
+			const noTokenContainer = new ContainerBuilder()
+				.setAccentColor(client.color.red)
+				.addTextDisplayComponents((textDisplay) =>
+					textDisplay.setContent("Genius API token is not set in the environment!")
+				);
+			return ctx.sendMessage({
+				components: [noTokenContainer],
+				flags: MessageFlags.IsComponentsV2,
+			});
+		}
+		const lyricsResult = await this.fetchLyricsFromGenius(trackTitle, artistName, geniusToken);
 
 		const searchingContainer = new ContainerBuilder()
 			.setAccentColor(client.color.main)
 			.addTextDisplayComponents((textDisplay) =>
-				textDisplay.setContent(
-					ctx.locale("cmd.lyrics.searching", { trackTitle }),
-				),
+				textDisplay.setContent(ctx.locale("cmd.lyrics.searching", { trackTitle }))
 			);
 
 		await ctx.sendDeferMessage({
@@ -135,24 +182,13 @@ export default class Lyrics extends Command {
 		});
 
 		try {
-			// Handle lyricsResult as an object with lines (Musixmatch, Spotify, etc.)
-			let lyricsText: string | null = null;
-			if (
-				lyricsResult &&
-				typeof lyricsResult === "object" &&
-				Array.isArray((lyricsResult as LyricsResult).lines)
-			) {
-				lyricsText = (lyricsResult as LyricsResult)
-					.lines!.map((l: LyricsLine) => l.line)
-					.join("\n");
-			} else if (typeof lyricsResult === "string") {
-				lyricsText = lyricsResult;
-			}
+			// lyricsResult is now always a string or null
+			let lyricsText: string | null = lyricsResult;
 			if (!lyricsText || lyricsText.length < 10) {
 				const noResultsContainer = new ContainerBuilder()
 					.setAccentColor(client.color.red)
 					.addTextDisplayComponents((textDisplay) =>
-						textDisplay.setContent(ctx.locale("cmd.lyrics.errors.no_results")),
+						textDisplay.setContent(ctx.locale("cmd.lyrics.errors.no_results"))
 					);
 				await ctx.editMessage({
 					components: [noResultsContainer],
@@ -166,13 +202,8 @@ export default class Lyrics extends Command {
 				const lyricsPages = this.paginateLyrics(cleanedLyrics, ctx);
 				let currentPage = 0;
 
-				const createLyricsContainer = (
-					pageIndex: number,
-					finalState: boolean = false,
-				) => {
-					const currentLyricsPage =
-						lyricsPages[pageIndex] ||
-						ctx.locale("cmd.lyrics.no_lyrics_on_page");
+				const createLyricsContainer = (pageIndex: number, finalState: boolean = false) => {
+					const currentLyricsPage = lyricsPages[pageIndex] || ctx.locale("cmd.lyrics.no_lyrics_on_page");
 
 					let fullContent =
 						ctx.locale("cmd.lyrics.lyrics_for_track", {
@@ -192,18 +223,15 @@ export default class Lyrics extends Command {
 						fullContent += `\n\n*${ctx.locale("cmd.lyrics.session_expired")}*`;
 					}
 
-					const mainLyricsSection =
-						new SectionBuilder().addTextDisplayComponents((textDisplay) =>
-							textDisplay.setContent(fullContent),
-						);
+					const mainLyricsSection = new SectionBuilder().addTextDisplayComponents((textDisplay) =>
+						textDisplay.setContent(fullContent)
+					);
 
 					if (artworkUrl && artworkUrl.length > 0) {
 						mainLyricsSection.setThumbnailAccessory((thumbnail) =>
 							thumbnail
 								.setURL(artworkUrl)
-								.setDescription(
-									ctx.locale("cmd.lyrics.artwork_description", { trackTitle }),
-								),
+								.setDescription(ctx.locale("cmd.lyrics.artwork_description", { trackTitle }))
 						);
 					}
 
@@ -227,39 +255,18 @@ export default class Lyrics extends Command {
 							.setCustomId("next")
 							.setEmoji(client.emoji.page.next)
 							.setStyle(ButtonStyle.Secondary)
-							.setDisabled(current === lyricsPages.length - 1),
+							.setDisabled(current === lyricsPages.length - 1)
 					);
 				};
 
-				// Add subscribe/unsubscribe buttons to lyrics
-				const liveLyricsRow =
-					new ActionRowBuilder<ButtonBuilder>().addComponents(
-						new ButtonBuilder()
-							.setCustomId("lyrics_subscribe")
-							.setLabel(ctx.locale("cmd.lyrics.button_subscribe"))
-							.setStyle(ButtonStyle.Success),
-						new ButtonBuilder()
-							.setCustomId("lyrics_unsubscribe")
-							.setLabel(ctx.locale("cmd.lyrics.button_unsubscribe"))
-							.setStyle(ButtonStyle.Danger),
-					);
-
+				// Only show navigation, no live lyrics/subscribe logic
 				await ctx.editMessage({
-					components: [
-						createLyricsContainer(currentPage),
-						getNavigationRow(currentPage),
-						liveLyricsRow,
-					],
+					components: [createLyricsContainer(currentPage), getNavigationRow(currentPage)],
 					flags: MessageFlags.IsComponentsV2,
 				});
 
-				const filter = (interaction: ButtonInteraction<"cached">) =>
-					interaction.user.id === ctx.author?.id;
+				const filter = (interaction: ButtonInteraction<"cached">) => interaction.user.id === ctx.author?.id;
 				let collectorActive = true;
-				let running = false;
-				let lyricsUpdater: Promise<void> | null = null;
-				let lastLine = -1;
-				let subscriptionActive = false;
 				while (collectorActive) {
 					try {
 						const interaction = await ctx.channel.awaitMessageComponent({
@@ -267,148 +274,30 @@ export default class Lyrics extends Command {
 							componentType: ComponentType.Button,
 							time: 60000,
 						});
-						if (interaction.customId === "lyrics_subscribe") {
-							await interaction.reply({
-								content: ctx.locale("cmd.lyrics.subscribed"),
-								flags: MessageFlags.Ephemeral,
-							});
-							running = true;
-							subscriptionActive = true;
-							const maxTime = Date.now() + 3 * 60 * 1000;
-							const lyricsLines = (lyricsResult as LyricsResult).lines!;
-							lyricsUpdater = (async () => {
-								while (running && Date.now() < maxTime) {
-									if (!player || !player.playing) break;
-									const position = player.position;
-									let currentIdx = lyricsLines.findIndex((l) => {
-										const time =
-											(l as any).startTime ??
-											(l as any).time ??
-											(l as any).timestamp;
-										return typeof time === "number" && time > position;
-									});
-									if (currentIdx === -1) currentIdx = lyricsLines.length - 1;
-									else if (currentIdx > 0) currentIdx--;
-									if (currentIdx !== lastLine) {
-										lastLine = currentIdx;
-										const formatted = lyricsLines
-											.map((l, i) =>
-												i === currentIdx ? `**${l.line}**` : l.line,
-											)
-											.join("\n");
-										const liveLyricsContainer = new ContainerBuilder()
-											.setAccentColor(client.color.main)
-											.addTextDisplayComponents((textDisplay) =>
-												textDisplay.setContent(
-													ctx.locale("cmd.lyrics.lyrics_for_track", {
-														trackTitle,
-														trackUrl,
-													}) +
-														"\n" +
-														(artistName ? `*${artistName}*\n\n` : "") +
-														formatted,
-												),
-											);
-										await ctx.editMessage({
-											components: [liveLyricsContainer, liveLyricsRow],
-											flags: MessageFlags.IsComponentsV2,
-										});
-									}
-									await new Promise((res) => setTimeout(res, 1000));
-								}
-							})();
-							continue;
-						}
-						if (interaction.customId === "lyrics_unsubscribe") {
-							running = false;
-							subscriptionActive = false;
-							const lyricsLines = (lyricsResult as any).lines as LyricsLine[];
-							const formatted = lyricsLines.map((l) => l.line).join("\n");
-							const unsubLyricsContainer = new ContainerBuilder()
-								.setAccentColor(client.color.main)
-								.addTextDisplayComponents((textDisplay) =>
-									textDisplay.setContent(
-										ctx.locale("cmd.lyrics.lyrics_for_track", {
-											trackTitle,
-											trackUrl,
-										}) +
-											"\n" +
-											(artistName ? `*${artistName}*\n\n` : "") +
-											formatted +
-											`\n\n*${ctx.locale("cmd.lyrics.unsubscribed")}*`,
-									),
-								);
-							await interaction.update({
-								components: [
-									unsubLyricsContainer,
-									getNavigationRow(currentPage),
-									liveLyricsRow,
-								],
-							});
-							await interaction.reply({
-								content: ctx.locale("cmd.lyrics.unsubscribed"),
-								flags: MessageFlags.Ephemeral,
-							});
-							if (lyricsUpdater) await lyricsUpdater;
-							continue;
-						}
 						if (interaction.customId === "prev") {
 							currentPage--;
 						} else if (interaction.customId === "next") {
 							currentPage++;
 						} else if (interaction.customId === "stop") {
 							collectorActive = false;
-							running = false;
 							await interaction.update({
-								components: [
-									createLyricsContainer(currentPage, true),
-									getNavigationRow(currentPage),
-								],
+								components: [createLyricsContainer(currentPage, true), getNavigationRow(currentPage)],
 							});
 							break;
 						}
-						// If subscription is active, do not show navigation buttons
-						if (subscriptionActive) {
-							await interaction.update({
-								components: [createLyricsContainer(currentPage), liveLyricsRow],
-							});
-						} else {
-							await interaction.update({
-								components: [
-									createLyricsContainer(currentPage),
-									getNavigationRow(currentPage),
-									liveLyricsRow,
-								],
-							});
-						}
+						await interaction.update({
+							components: [createLyricsContainer(currentPage), getNavigationRow(currentPage)],
+						});
 					} catch (e) {
 						collectorActive = false;
 					}
 				}
 				// After collecting is finished
-				if (
-					ctx.guild?.members.me
-						?.permissionsIn(ctx.channelId)
-						.has("SendMessages")
-				) {
+				if (ctx.guild?.members.me?.permissionsIn(ctx.channelId).has("SendMessages")) {
 					const finalContainer = createLyricsContainer(currentPage, true);
-					// Deactivate subscription buttons after the song ends
-					const disabledLiveLyricsRow =
-						new ActionRowBuilder<ButtonBuilder>().addComponents(
-							new ButtonBuilder()
-								.setCustomId("lyrics_subscribe")
-								.setLabel(ctx.locale("cmd.lyrics.button_subscribe"))
-								.setStyle(ButtonStyle.Success)
-								.setDisabled(true),
-							new ButtonBuilder()
-								.setCustomId("lyrics_unsubscribe")
-								.setLabel(ctx.locale("cmd.lyrics.button_unsubscribe"))
-								.setStyle(ButtonStyle.Danger)
-								.setDisabled(true),
-						);
 					await ctx
 						.editMessage({
-							components: [finalContainer, disabledLiveLyricsRow],
+							components: [finalContainer],
 							flags: MessageFlags.IsComponentsV2,
 						})
 						.catch((e) => {
@@ -421,7 +310,7 @@ export default class Lyrics extends Command {
 				const noResultsContainer = new ContainerBuilder()
 					.setAccentColor(client.color.red)
 					.addTextDisplayComponents((textDisplay) =>
-						textDisplay.setContent(ctx.locale("cmd.lyrics.errors.no_results")),
+						textDisplay.setContent(ctx.locale("cmd.lyrics.errors.no_results"))
 					);
 				await ctx.editMessage({
 					components: [noResultsContainer],
@@ -433,70 +322,13 @@ export default class Lyrics extends Command {
 			const errorContainer = new ContainerBuilder()
 				.setAccentColor(client.color.red)
 				.addTextDisplayComponents((textDisplay) =>
-					textDisplay.setContent(ctx.locale("cmd.lyrics.errors.lyrics_error")),
+					textDisplay.setContent(ctx.locale("cmd.lyrics.errors.lyrics_error"))
 				);
 			await ctx.editMessage({
 				components: [errorContainer],
 				flags: MessageFlags.IsComponentsV2,
 			});
 		}
-	}
-
-	async fetchTrackAndLyrics({
-		client,
-		ctx,
-		songQuery,
-		player,
-	}: {
-		client: Lavamusic;
-		ctx: Context;
-		songQuery: string;
-		player?: any; // Use proper player type from lavalink-client
-	}) {
-		let trackTitle = "";
-		let artistName = "";
-		let trackUrl = "";
-		let artworkUrl = "";
-		let lyricsResult: LyricsResult | string = "";
-
-		const searchRes = await client.manager.search(
-			songQuery,
-			ctx.author,
-			undefined,
-		);
-		const track = searchRes.tracks[0];
-		if (!track) {
-			const noResultsContainer = new ContainerBuilder()
-				.setAccentColor(client.color.red)
-				.addTextDisplayComponents((textDisplay) =>
-					textDisplay.setContent(ctx.locale("cmd.lyrics.errors.no_results")),
-				);
-			await ctx.editMessage({
-				components: [noResultsContainer],
-				flags: MessageFlags.IsComponentsV2,
-			});
-			return null;
-		}
-		try {
-			if (!player) {
-				const node = client.manager.nodeManager.leastUsedNodes()[0];
-				const result = await node.lyrics.get(track, true);
-				lyricsResult = result ?? "";
-			} else {
-				lyricsResult = await player.getLyrics(track, true);
-			}
-		} catch (err) {
-			if (client.logger && typeof client.logger.error === "function") {
-				client.logger.error(`[LYRICS] Error fetching lyrics: ${err}`);
-			}
-			throw err;
-		}
-		trackTitle = track.info.title;
-		artistName = track.info.author;
-		trackUrl = track.info.uri;
-		artworkUrl = track.info.artworkUrl || "";
-
-		return { lyricsResult, trackTitle, artistName, trackUrl, artworkUrl };
 	}
 
 	paginateLyrics(lyrics: string, ctx: Context): string[] {
@@ -508,10 +340,7 @@ export default class Lyrics extends Command {
 		for (const line of lines) {
 			const lineWithNewline = `${line}\n`;
 
-			if (
-				currentPage.length + lineWithNewline.length >
-				MAX_CHARACTERS_PER_PAGE
-			) {
+			if (currentPage.length + lineWithNewline.length > MAX_CHARACTERS_PER_PAGE) {
 				if (currentPage.trim()) {
 					pages.push(currentPage.trim());
 				}
@@ -534,10 +363,7 @@ export default class Lyrics extends Command {
 
 	private cleanLyrics(lyrics: string): string {
 		let cleaned = lyrics
-			.replace(
-				/^(\d+\s*Contributors.*?Lyrics|.*Contributors.*|Lyrics\s*|.*Lyrics\s*)$/gim,
-				"",
-			)
+			.replace(/^(\d+\s*Contributors.*?Lyrics|.*Contributors.*|Lyrics\s*|.*Lyrics\s*)$/gim, "")
 			.replace(/^[\s\n\r]+/, "")
 			.replace(/[\s\n\r]+$/, "")
 			.replace(/\n{3,}/g, "\n\n");
