@@ -1,5 +1,6 @@
 import { I18N } from "../../structures/I18n";
 import { Command, type Context, type Lavamusic } from "../../structures/index";
+import { autoPlayFunction } from "../../utils/functions/player";
 import { EmbedLinks, ReadMessageHistory, SendMessages, ViewChannel } from "../../utils/Permissions";
 
 export default class Skip extends Command {
@@ -47,11 +48,26 @@ export default class Skip extends Command {
 				],
 			});
 		}
-		if (player.queue.tracks.length === 0 && !autoplay) {
+
+		// Check if queue will be empty after skip and autoplay is enabled
+		const willBeEmpty = player.queue.tracks.length === 0;
+
+		if (willBeEmpty && !autoplay) {
 			await player.stopPlaying(false, false);
 		} else {
 			await player.skip();
+
+			// If autoplay is enabled and queue is now empty, trigger autoplay
+			if (autoplay && willBeEmpty && currentTrack) {
+				// Give a small delay for the skip to process
+				setTimeout(() => {
+					autoPlayFunction(player, currentTrack).catch((error) => {
+						console.error("[Skip] Failed to trigger autoplay:", error);
+					});
+				}, 100);
+			}
 		}
+
 		if (ctx.isInteraction) {
 			return await ctx.sendMessage({
 				embeds: [
@@ -64,6 +80,11 @@ export default class Skip extends Command {
 				],
 			});
 		}
-		ctx.message?.react("👍");
+		// Wrap reaction in try-catch to handle message deletion race condition
+		try {
+			await ctx.message?.react("👍");
+		} catch (error) {
+			// Silently ignore - message may have been deleted by TrackEnd event
+		}
 	}
 }

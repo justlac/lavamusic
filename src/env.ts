@@ -75,6 +75,7 @@ const envSchema = z.object({
 		z.array(LavalinkNodeSchema),
 	),
 	GENIUS_API: z.string().optional(),
+	LASTFM_API_KEY: z.string().optional(),
 });
 
 type Env = z.infer<typeof envSchema>;

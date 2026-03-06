@@ -22,6 +22,7 @@ import PlayerPaused from "./player/PlayerPaused";
 import PlayerResumed from "./player/PlayerResumed";
 import QueueEnd from "./player/QueueEnd";
 import TrackEnd from "./player/TrackEnd";
+import TrackException from "./player/TrackException";
 import TrackStart from "./player/TrackStart";
 
 export const EventList = [
@@ -45,5 +46,6 @@ export const EventList = [
 	PlayerResumed,
 	QueueEnd,
 	TrackEnd,
-	TrackStart,
+	TrackException,
+	TrackStart
 ];

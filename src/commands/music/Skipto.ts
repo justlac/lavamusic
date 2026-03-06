@@ -1,5 +1,6 @@
 import { I18N } from "../../structures/I18n";
 import { Command, type Context, type Lavamusic } from "../../structures/index";
+import { autoPlayFunction } from "../../utils/functions/player";
 import { EmbedLinks, ReadMessageHistory, SendMessages, ViewChannel } from "../../utils/Permissions";
 
 export default class Skipto extends Command {
@@ -59,15 +60,34 @@ export default class Skipto extends Command {
 			});
 		}
 
+		const autoplay = player.get<boolean>("autoplay");
+		const currentTrack = player.queue.current;
+		const willBeEmpty = num >= player.queue.tracks.length;
+
 		player.skip(num);
-		return await ctx.sendMessage({
-			embeds: [
-				embed.setColor(this.client.color.main).setDescription(
-					ctx.locale(I18N.commands.skipto.messages.skipped_to, {
-						number: num,
-					}),
-				),
-			],
-		});
+
+		// If autoplay is enabled and we're skipping to the last track (queue will be empty after), trigger autoplay
+		if (autoplay && willBeEmpty && currentTrack) {
+			setTimeout(() => {
+				autoPlayFunction(player, currentTrack).catch((error) => {
+					console.error("[Skipto] Failed to trigger autoplay:", error);
+				});
+			}, 100);
+		}
+
+		// Wrap in try-catch to handle message deletion race condition
+		try {
+			return await ctx.sendMessage({
+				embeds: [
+					embed.setColor(this.client.color.main).setDescription(
+						ctx.locale(I18N.commands.skipto.messages.skipped_to, {
+							number: num,
+						}),
+					),
+				],
+			});
+		} catch (error) {
+			// Silently ignore - message may have been deleted by TrackEnd event
+		}
 	}
 }

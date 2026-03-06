@@ -85,24 +85,18 @@ export function createButtonRow(player: Player): ActionRowBuilder<ButtonBuilder>
 	return new ActionRowBuilder<ButtonBuilder>().addComponents(
 		new ButtonBuilder()
 			.setCustomId("resume")
-			.setLabel(player.paused ? t(I18N.buttons.resume) : t(I18N.buttons.pause))
+			.setEmoji(player.paused ? "▶️" : "⏸️")
 			.setStyle(player.paused ? ButtonStyle.Success : ButtonStyle.Secondary),
 		new ButtonBuilder()
 			.setCustomId("previous")
-			.setLabel(t(I18N.buttons.previous))
+			.setEmoji("⏮️")
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(!player.queue.previous || player.queue.previous.length === 0),
-		new ButtonBuilder()
-			.setCustomId("stop")
-			.setLabel(t(I18N.buttons.stop))
-			.setStyle(ButtonStyle.Danger),
-		new ButtonBuilder()
-			.setCustomId("skip")
-			.setLabel(t(I18N.buttons.skip))
-			.setStyle(ButtonStyle.Secondary),
+		new ButtonBuilder().setCustomId("stop").setEmoji("⏹️").setStyle(ButtonStyle.Danger),
+		new ButtonBuilder().setCustomId("skip").setEmoji("⏭️").setStyle(ButtonStyle.Secondary),
 		new ButtonBuilder()
 			.setCustomId("loop")
-			.setLabel(t(I18N.buttons.loop))
+			.setEmoji("🔁")
 			.setStyle(player.repeatMode !== "off" ? ButtonStyle.Success : ButtonStyle.Secondary),
 	);
 }

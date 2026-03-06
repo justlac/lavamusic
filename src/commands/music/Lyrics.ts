@@ -8,10 +8,9 @@ import {
 	MessageFlags,
 	SectionBuilder,
 } from "discord.js";
-import type { LyricsLine, LyricsResult } from "lavalink-client";
 import { I18N } from "../../structures/I18n";
 import { Command, type Context, type Lavamusic } from "../../structures/index";
-import logger from "../../structures/Logger";
+import { getGeniusSong } from "../../utils/Genius";
 import {
 	AttachFiles,
 	EmbedLinks,
@@ -58,7 +57,6 @@ export default class Lyrics extends Command {
 	}
 
 	public async run(client: Lavamusic, ctx: Context): Promise<any> {
-		// Get the song query from options or arguments
 		let songQuery = "";
 		if (ctx.options && typeof ctx.options.get === "function") {
 			let songOpt = null;
@@ -72,16 +70,15 @@ export default class Lyrics extends Command {
 			}
 		}
 		if (!songQuery && ctx.args?.[0]) {
-			songQuery = ctx.args[0];
+			songQuery = ctx.args.join(" ");
 		}
 
 		const player = client.manager.getPlayer(ctx.guild!.id);
 
-		// If there is no player and no song title is given, lyrics cannot be fetched
 		if (!songQuery && !player) {
 			const noMusicContainer = new ContainerBuilder()
 				.setAccentColor(client.color.red)
-				.addTextDisplayComponents((textDisplay) =>
+				.addTextDisplayComponents((textDisplay: any) =>
 					textDisplay.setContent(ctx.locale(I18N.events.message.no_music_playing)),
 				);
 			return ctx.sendMessage({
@@ -89,28 +86,24 @@ export default class Lyrics extends Command {
 				flags: MessageFlags.IsComponentsV2,
 			});
 		}
-		// If songQuery is given, fetch lyrics for the specified song
+
 		let trackTitle = "";
 		let artistName = "";
 		let trackUrl = "";
 		let artworkUrl = "";
-		let lyricsResult: LyricsResult | string = "";
+
+		// Get track info from song query or currently playing track
 		if (songQuery) {
-			const result = await this.fetchTrackAndLyrics({
-				client,
-				ctx,
-				songQuery,
-				player,
-			});
-			if (!result) return;
-			lyricsResult = result.lyricsResult;
-			trackTitle = result.trackTitle;
-			artistName = result.artistName;
-			trackUrl = result.trackUrl;
-			artworkUrl = result.artworkUrl;
+			// Parse song query (format: "Artist - Title" or just "Title")
+			const parts = songQuery.split(" - ");
+			if (parts.length >= 2) {
+				artistName = parts[0].trim();
+				trackTitle = parts.slice(1).join(" - ").trim();
+			} else {
+				trackTitle = songQuery.trim();
+				artistName = "";
+			}
 		} else if (player?.queue.current) {
-			// If no songquery is given, fetch lyrics for the currently playing song
-			lyricsResult = await player.getCurrentLyrics(false);
 			const track = player.queue.current;
 			trackTitle =
 				(track.info.title?.replace(/\[.*?]|\(.*?\)|{.*?}/g, "").trim() as string) ||
@@ -124,7 +117,7 @@ export default class Lyrics extends Command {
 
 		const searchingContainer = new ContainerBuilder()
 			.setAccentColor(client.color.main)
-			.addTextDisplayComponents((textDisplay) =>
+			.addTextDisplayComponents((textDisplay: any) =>
 				textDisplay.setContent(ctx.locale(I18N.commands.lyrics.searching, { trackTitle })),
 			);
 
@@ -134,23 +127,16 @@ export default class Lyrics extends Command {
 		});
 
 		try {
-			// Handle lyricsResult as an object with lines (Musixmatch, Spotify, etc.)
-			let lyricsText: string | null = null;
-			if (
-				lyricsResult &&
-				typeof lyricsResult === "object" &&
-				Array.isArray((lyricsResult as LyricsResult).lines)
-			) {
-				lyricsText = (lyricsResult as LyricsResult)
-					.lines!.map((l: LyricsLine) => l.line)
-					.join("\n");
-			} else if (typeof lyricsResult === "string") {
-				lyricsText = lyricsResult;
-			}
-			if (!lyricsText || lyricsText.length < 10) {
+			// Fetch lyrics from Genius API
+			const geniusSong = await getGeniusSong({
+				title: trackTitle,
+				artist: artistName,
+			});
+
+			if (!geniusSong || !geniusSong.lyrics || geniusSong.lyrics.length < 10) {
 				const noResultsContainer = new ContainerBuilder()
 					.setAccentColor(client.color.red)
-					.addTextDisplayComponents((textDisplay) =>
+					.addTextDisplayComponents((textDisplay: any) =>
 						textDisplay.setContent(ctx.locale(I18N.commands.lyrics.errors.no_results)),
 					);
 				await ctx.editMessage({
@@ -159,13 +145,17 @@ export default class Lyrics extends Command {
 				});
 				return;
 			}
-			const cleanedLyrics = this.cleanLyrics(lyricsText);
+
+			// Update track info with Genius data
+			trackUrl = geniusSong.url;
+			artworkUrl = geniusSong.albumArt || artworkUrl;
+			const cleanedLyrics = this.cleanLyrics(geniusSong.lyrics);
 
 			if (cleanedLyrics && cleanedLyrics.length > 0) {
 				const lyricsPages = this.paginateLyrics(cleanedLyrics, ctx);
 				let currentPage = 0;
 
-				const createLyricsContainer = (pageIndex: number, finalState: boolean = false) => {
+				const createLyricsContainer = (pageIndex: number) => {
 					const currentLyricsPage =
 						lyricsPages[pageIndex] || ctx.locale(I18N.commands.lyrics.no_lyrics_on_page);
 
@@ -178,21 +168,19 @@ export default class Lyrics extends Command {
 						(artistName ? `*${artistName}*\n\n` : "") +
 						`${currentLyricsPage}`;
 
-					if (!finalState) {
+					if (lyricsPages.length > 1) {
 						fullContent += `\n\n${ctx.locale(I18N.commands.lyrics.page_indicator, {
 							current: pageIndex + 1,
 							total: lyricsPages.length,
 						})}`;
-					} else {
-						fullContent += `\n\n*${ctx.locale(I18N.commands.lyrics.session_expired)}*`;
 					}
 
-					const mainLyricsSection = new SectionBuilder().addTextDisplayComponents((textDisplay) =>
-						textDisplay.setContent(fullContent),
+					const mainLyricsSection = new SectionBuilder().addTextDisplayComponents(
+						(textDisplay: any) => textDisplay.setContent(fullContent),
 					);
 
 					if (artworkUrl && artworkUrl.length > 0) {
-						mainLyricsSection.setThumbnailAccessory((thumbnail) =>
+						mainLyricsSection.setThumbnailAccessory((thumbnail: any) =>
 							thumbnail
 								.setURL(artworkUrl)
 								.setDescription(
@@ -225,181 +213,60 @@ export default class Lyrics extends Command {
 					);
 				};
 
-				// Add subscribe/unsubscribe buttons to lyrics
-				const liveLyricsRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-					new ButtonBuilder()
-						.setCustomId("lyrics_subscribe")
-						.setLabel(ctx.locale(I18N.commands.lyrics.button_subscribe))
-						.setStyle(ButtonStyle.Success),
-					new ButtonBuilder()
-						.setCustomId("lyrics_unsubscribe")
-						.setLabel(ctx.locale(I18N.commands.lyrics.button_unsubscribe))
-						.setStyle(ButtonStyle.Danger),
-				);
-
 				await ctx.editMessage({
-					components: [
-						createLyricsContainer(currentPage),
-						getNavigationRow(currentPage),
-						liveLyricsRow,
-					],
+					components: [createLyricsContainer(currentPage), getNavigationRow(currentPage)],
 					flags: MessageFlags.IsComponentsV2,
 				});
 
 				const filter = (interaction: ButtonInteraction<"cached">) =>
 					interaction.user.id === ctx.author?.id;
 				let collectorActive = true;
-				let running = false;
-				let lyricsUpdater: Promise<void> | null = null;
-				let lastLine = -1;
-				let subscriptionActive = false;
 				while (collectorActive) {
 					try {
 						const interaction = await ctx.channel.awaitMessageComponent({
 							filter,
 							componentType: ComponentType.Button,
-							time: 60000,
+							time: 300000, // 5 minutes instead of 1 minute
 						});
-						if (interaction.customId === "lyrics_subscribe") {
-							await interaction.reply({
-								content: ctx.locale(I18N.commands.lyrics.subscribed),
-								flags: MessageFlags.Ephemeral,
-							});
-							running = true;
-							subscriptionActive = true;
-							const maxTime = Date.now() + 3 * 60 * 1000;
-							const lyricsLines = (lyricsResult as LyricsResult).lines!;
-							lyricsUpdater = (async () => {
-								while (running && Date.now() < maxTime) {
-									if (!player || !player.playing) break;
-									const position = player.position;
-									let currentIdx = lyricsLines.findIndex((l) => {
-										const time = (l as any).startTime ?? (l as any).time ?? (l as any).timestamp;
-										return typeof time === "number" && time > position;
-									});
-									if (currentIdx === -1) currentIdx = lyricsLines.length - 1;
-									else if (currentIdx > 0) currentIdx--;
-									if (currentIdx !== lastLine) {
-										lastLine = currentIdx;
-										const formatted = lyricsLines
-											.map((l, i) => (i === currentIdx ? `**${l.line}**` : l.line))
-											.join("\n");
-										const liveLyricsContainer = new ContainerBuilder()
-											.setAccentColor(client.color.main)
-											.addTextDisplayComponents((textDisplay) =>
-												textDisplay.setContent(
-													ctx.locale(I18N.commands.lyrics.lyrics_for_track, {
-														trackTitle,
-														trackUrl,
-													}) +
-														"\n" +
-														(artistName ? `*${artistName}*\n\n` : "") +
-														formatted,
-												),
-											);
-										await ctx.editMessage({
-											components: [liveLyricsContainer, liveLyricsRow],
-											flags: MessageFlags.IsComponentsV2,
-										});
-									}
-									await new Promise((res) => setTimeout(res, 1000));
-								}
-							})();
-							continue;
-						}
-						if (interaction.customId === "lyrics_unsubscribe") {
-							running = false;
-							subscriptionActive = false;
-							const lyricsLines = (lyricsResult as any).lines as LyricsLine[];
-							const formatted = lyricsLines.map((l) => l.line).join("\n");
-							const unsubLyricsContainer = new ContainerBuilder()
-								.setAccentColor(client.color.main)
-								.addTextDisplayComponents((textDisplay) =>
-									textDisplay.setContent(
-										ctx.locale(I18N.commands.lyrics.lyrics_for_track, {
-											trackTitle,
-											trackUrl,
-										}) +
-											"\n" +
-											(artistName ? `*${artistName}*\n\n` : "") +
-											formatted +
-											`\n\n*${ctx.locale(I18N.commands.lyrics.unsubscribed)}*`,
-									),
-								);
-							await interaction.update({
-								components: [unsubLyricsContainer, getNavigationRow(currentPage), liveLyricsRow],
-							});
-							await interaction.reply({
-								content: ctx.locale(I18N.commands.lyrics.unsubscribed),
-								flags: MessageFlags.Ephemeral,
-							});
-							if (lyricsUpdater) await lyricsUpdater;
-							continue;
-						}
+
 						if (interaction.customId === "prev") {
 							currentPage--;
 						} else if (interaction.customId === "next") {
 							currentPage++;
 						} else if (interaction.customId === "stop") {
 							collectorActive = false;
-							running = false;
 							await interaction.update({
-								components: [
-									createLyricsContainer(currentPage, true),
-									getNavigationRow(currentPage),
-								],
+								components: [createLyricsContainer(currentPage)],
 							});
 							break;
 						}
-						// If subscription is active, do not show navigation buttons
-						if (subscriptionActive) {
-							await interaction.update({
-								components: [createLyricsContainer(currentPage), liveLyricsRow],
-							});
-						} else {
-							await interaction.update({
-								components: [
-									createLyricsContainer(currentPage),
-									getNavigationRow(currentPage),
-									liveLyricsRow,
-								],
-							});
-						}
+
+						await interaction.update({
+							components: [createLyricsContainer(currentPage), getNavigationRow(currentPage)],
+						});
 					} catch (_error) {
+						// Timeout occurred - just disable the buttons but keep the lyrics visible
 						collectorActive = false;
 					}
 				}
-				// After collecting is finished
+
+				// After timeout or stop, just remove the navigation buttons but keep lyrics visible
 				if (ctx.guild?.members.me?.permissionsIn(ctx.channelId).has("SendMessages")) {
-					const finalContainer = createLyricsContainer(currentPage, true);
-					// Deactivate subscription buttons after the song ends
-					const disabledLiveLyricsRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-						new ButtonBuilder()
-							.setCustomId("lyrics_subscribe")
-							.setLabel(ctx.locale(I18N.commands.lyrics.button_subscribe))
-							.setStyle(ButtonStyle.Success)
-							.setDisabled(true),
-						new ButtonBuilder()
-							.setCustomId("lyrics_unsubscribe")
-							.setLabel(ctx.locale(I18N.commands.lyrics.button_unsubscribe))
-							.setStyle(ButtonStyle.Danger)
-							.setDisabled(true),
-					);
 					await ctx
 						.editMessage({
-							components: [finalContainer, disabledLiveLyricsRow],
+							components: [createLyricsContainer(currentPage)],
 							flags: MessageFlags.IsComponentsV2,
 						})
-						.catch((e) => {
+						.catch((e: any) => {
 							if (e?.code !== 10008) {
-								logger.error("Failed to clear lyrics buttons:", e);
+								console.error("Failed to update lyrics message:", e);
 							}
 						});
 				}
 			} else {
 				const noResultsContainer = new ContainerBuilder()
 					.setAccentColor(client.color.red)
-					.addTextDisplayComponents((textDisplay) =>
+					.addTextDisplayComponents((textDisplay: any) =>
 						textDisplay.setContent(ctx.locale(I18N.commands.lyrics.errors.no_results)),
 					);
 				await ctx.editMessage({
@@ -408,10 +275,10 @@ export default class Lyrics extends Command {
 				});
 			}
 		} catch (error) {
-			logger.error(error);
+			console.error(error);
 			const errorContainer = new ContainerBuilder()
 				.setAccentColor(client.color.red)
-				.addTextDisplayComponents((textDisplay) =>
+				.addTextDisplayComponents((textDisplay: any) =>
 					textDisplay.setContent(ctx.locale(I18N.commands.lyrics.errors.lyrics_error)),
 				);
 			await ctx.editMessage({
@@ -419,59 +286,6 @@ export default class Lyrics extends Command {
 				flags: MessageFlags.IsComponentsV2,
 			});
 		}
-	}
-
-	async fetchTrackAndLyrics({
-		client,
-		ctx,
-		songQuery,
-		player,
-	}: {
-		client: Lavamusic;
-		ctx: Context;
-		songQuery: string;
-		player?: any; // Use proper player type from lavalink-client
-	}) {
-		let trackTitle = "";
-		let artistName = "";
-		let trackUrl = "";
-		let artworkUrl = "";
-		let lyricsResult: LyricsResult | string = "";
-
-		const searchRes = await client.manager.search(songQuery, ctx.author, undefined);
-		const track = searchRes.tracks[0];
-		if (!track) {
-			const noResultsContainer = new ContainerBuilder()
-				.setAccentColor(client.color.red)
-				.addTextDisplayComponents((textDisplay) =>
-					textDisplay.setContent(ctx.locale(I18N.commands.lyrics.errors.no_results)),
-				);
-			await ctx.editMessage({
-				components: [noResultsContainer],
-				flags: MessageFlags.IsComponentsV2,
-			});
-			return null;
-		}
-		try {
-			if (!player) {
-				const node = client.manager.nodeManager.leastUsedNodes()[0];
-				const result = await node.lyrics.get(track, true);
-				lyricsResult = result ?? "";
-			} else {
-				lyricsResult = await player.getLyrics(track, true);
-			}
-		} catch (err) {
-			if (logger && typeof logger.error === "function") {
-				logger.error(`[LYRICS] Error fetching lyrics: ${err}`);
-			}
-			throw err;
-		}
-		trackTitle = track.info.title;
-		artistName = track.info.author;
-		trackUrl = track.info.uri;
-		artworkUrl = track.info.artworkUrl || "";
-
-		return { lyricsResult, trackTitle, artistName, trackUrl, artworkUrl };
 	}
 
 	paginateLyrics(lyrics: string, ctx: Context): string[] {

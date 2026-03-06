@@ -7,9 +7,9 @@ import {
 	type ModalSubmitInteraction,
 } from "discord.js";
 import type { Player } from "lavalink-client";
+import { checkDj, createButtonRow } from "../events/player/TrackStart";
 import { I18N, t } from "../structures/I18n";
 import type { Lavamusic } from "../structures/index";
-import { checkDj, createButtonRow } from "../events/player/TrackStart";
 import { updateSetup } from "./SetupSystem";
 
 export async function handlePlayerInteraction(
@@ -82,8 +82,13 @@ export async function updatePlayerMessage(
 		embed.setThumbnail(track.info.artworkUrl);
 	}
 
-	await interaction.message.edit({
-		embeds: [embed],
-		components: [createButtonRow(player)],
-	});
+	// Wrap in try-catch to handle message deletion race condition
+	try {
+		await interaction.message.edit({
+			embeds: [embed],
+			components: [createButtonRow(player)],
+		});
+	} catch (error) {
+		// Silently ignore - message may have been deleted by TrackEnd event
+	}
 }

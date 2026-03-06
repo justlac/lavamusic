@@ -6,7 +6,7 @@ console.time("✅ Build complete");
 console.log("🧹 Cleaning previous build...");
 await rm("./dist", { recursive: true, force: true });
 
-Bun.spawnSync(["bun", "run", "scripts/prepare-pglite.ts"], {
+Bun.spawnSync([process.execPath, "run", "scripts/prepare-pglite.ts"], {
 	stdout: "inherit",
 	stderr: "inherit",
 });

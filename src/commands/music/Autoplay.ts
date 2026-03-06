@@ -1,5 +1,6 @@
 import { I18N } from "../../structures/I18n";
 import { Command, type Context, type Lavamusic } from "../../structures/index";
+import { autoPlayFunction } from "../../utils/functions/player";
 import { EmbedLinks, ReadMessageHistory, SendMessages, ViewChannel } from "../../utils/Permissions";
 
 export default class Autoplay extends Command {
@@ -51,13 +52,24 @@ export default class Autoplay extends Command {
 		player.set("autoplay", !autoplay);
 
 		if (autoplay) {
+			// Disabling autoplay
 			embed
 				.setDescription(ctx.locale(I18N.commands.autoplay.messages.disabled))
 				.setColor(this.client.color.main);
 		} else {
+			// Enabling autoplay - immediately queue tracks
 			embed
 				.setDescription(ctx.locale(I18N.commands.autoplay.messages.enabled))
 				.setColor(this.client.color.main);
+
+			// Immediately trigger autoplay if there's a current track
+			const currentTrack = player.queue.current;
+			if (currentTrack) {
+				// Run autoplay function asynchronously without blocking the response
+				autoPlayFunction(player, currentTrack).catch((error) => {
+					console.error("[Autoplay Command] Error queuing initial tracks:", error);
+				});
+			}
 		}
 
 		await ctx.sendMessage({ embeds: [embed] });

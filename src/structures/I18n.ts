@@ -30,6 +30,10 @@ export async function initI18n() {
 			})
 		: [];
 
+	// Temporarily suppress console.log to hide i18next banner
+	const originalLog = console.log;
+	console.log = () => {};
+
 	await i18next.init({
 		fallbackLng: Locale.EnglishUS,
 		supportedLngs: languages,
@@ -37,7 +41,11 @@ export async function initI18n() {
 		nsSeparator: ":",
 		keySeparator: ".",
 		initImmediate: false,
+		debug: false,
 	});
+
+	// Restore console.log
+	console.log = originalLog;
 
 	for (const locale of languages) {
 		const langPath = join(LOCALES_PATH, locale);

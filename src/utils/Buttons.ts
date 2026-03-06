@@ -1,6 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import type { Player } from "lavalink-client";
-import { I18N, t } from "../structures/I18n";
 
 function getButtons(player: Player): ActionRowBuilder<ButtonBuilder>[] {
 	const buttonData = [
@@ -26,7 +25,6 @@ function getButtons(player: Player): ActionRowBuilder<ButtonBuilder>[] {
 		},
 		{
 			customId: "skip",
-			label: t(I18N.buttons.skip),
 			style: ButtonStyle.Secondary,
 			emoji: "⏭️",
 		},
@@ -47,7 +45,6 @@ function getButtons(player: Player): ActionRowBuilder<ButtonBuilder>[] {
 		},
 		{
 			customId: "shuffle",
-			label: t(I18N.buttons.shuffle),
 			style: ButtonStyle.Secondary,
 			emoji: "🔀",
 		},
