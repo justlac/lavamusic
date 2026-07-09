@@ -73,11 +73,11 @@ services:
       # - SQLite: file:./lavamusic.db
       # - PGLite: file:./lavamusic-pgdata
       # - Postgres (requires '--profile postgres'): postgresql://lavamusic:lavamusic@postgres:5432/lavamusic
-      - DATABASE_URL=file:./lavamusic-pgdata
+      - DATABASE_URL=file:./lavamusic.db
     volumes:
       # Allow translation updates without rebuilding
       # - ./locales:/app/locales
-      - ./lavamusic-pgdata:/app/lavamusic-pgdata
+      - ./lavamusic-db:/app/lavamusic.db
     depends_on:
       lavalink:
         condition: service_healthy
