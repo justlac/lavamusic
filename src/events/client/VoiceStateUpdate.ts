@@ -119,6 +119,14 @@ export default class VoiceStateUpdate extends Event {
 	}
 
 	private async handleJoin(newState: VoiceState, client: Lavamusic): Promise<void> {
+		// Cancel any pending empty-channel leave timer when someone joins
+		const player = client.manager.getPlayer(newState.guild.id);
+		const existingTimer = player?.get<ReturnType<typeof setTimeout>>("leaveTimer");
+		if (existingTimer) {
+			clearTimeout(existingTimer);
+			player?.set("leaveTimer", undefined);
+		}
+
 		await this.delay(3000);
 		const bot = newState.guild.voiceStates.cache.get(client.user!.id);
 		if (!bot) return;
@@ -136,7 +144,6 @@ export default class VoiceStateUpdate extends Event {
 			}
 		}
 
-		const player = client.manager.getPlayer(newState.guild.id);
 		if (!player) return;
 
 		if (!player?.voiceChannelId) return;
@@ -168,13 +175,20 @@ export default class VoiceStateUpdate extends Event {
 		const vc = await newState.guild.channels.fetch(player.voiceChannelId).catch(() => null);
 		if (!vc || !("members" in vc)) return;
 
+		const EMPTY_CHANNEL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
 		if (
 			vc.members instanceof Map &&
 			Array.from(vc.members.values()).filter((m: GuildMember) => !m.user.bot).length === 0
 		) {
-			setTimeout(async () => {
+			// Cancel any existing timer before setting a new one
+			const existingTimer = player?.get<ReturnType<typeof setTimeout>>("leaveTimer");
+			if (existingTimer) clearTimeout(existingTimer);
+
+			const timer = setTimeout(async () => {
 				const latestPlayer = client.manager.getPlayer(newState.guild.id);
 				if (!latestPlayer?.voiceChannelId) return;
+				latestPlayer.set("leaveTimer", undefined);
 				const ch = await newState.guild.channels
 					.fetch(latestPlayer.voiceChannelId)
 					.catch(() => null);
@@ -188,11 +202,13 @@ export default class VoiceStateUpdate extends Event {
 						try {
 							await latestPlayer.destroy();
 						} catch (err) {
-							logger?.error?.("destroy() after 5s no-listeners failed", err);
+							logger?.error?.("destroy() after 5min no-listeners failed", err);
 						}
 					}
 				}
-			}, 5000);
+			}, EMPTY_CHANNEL_TIMEOUT_MS);
+
+			player?.set("leaveTimer", timer);
 		}
 	}
 
