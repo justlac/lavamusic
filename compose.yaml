@@ -15,9 +15,8 @@ services:
     volumes:
       # Mount application.yml from the same directory or use environment variables
       - ./Lavalink/application.yml:/opt/Lavalink/application.yml
-      # Persist plugins between restarts
-      # Make sure to set the correct permissions (user: 322, group: 322)
-      - ./Lavalink/plugins/:/opt/Lavalink/plugins/
+      # Plugins are intentionally NOT persisted so latest.release is re-resolved on every restart
+      # - ./Lavalink/plugins/:/opt/Lavalink/plugins/
     networks:
       - lavalink
     ports:
