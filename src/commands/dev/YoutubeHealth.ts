@@ -30,7 +30,11 @@ export default class YoutubeHealth extends Command {
 				client: [SendMessages, ReadMessageHistory, ViewChannel, EmbedLinks],
 				user: [],
 			},
-			slashCommand: false,
+			// The only dev command registered as a slash command, so it is usable
+			// as both /ytdiag and -ytdiag. Non-owners see it in the picker but
+			// InteractionCreate enforces `dev` against OWNER_IDS and returns
+			// silently, same as the prefix path.
+			slashCommand: true,
 			options: [],
 		});
 	}

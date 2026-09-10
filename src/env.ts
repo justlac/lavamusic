@@ -23,7 +23,7 @@ const envSchema = z.object({
 	TOKEN: z.string(),
 	CLIENT_ID: z.string(),
 	DEFAULT_LANGUAGE: z.string().default("EnglishUS"),
-	PREFIX: z.string().default("!"),
+	PREFIX: z.string().default("-"),
 	OWNER_IDS: z.preprocess(
 		(val) => (typeof val === "string" ? JSON.parse(val) : val),
 		z.string().array().optional(),
