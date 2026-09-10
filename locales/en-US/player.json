@@ -6,7 +6,17 @@
     "no_previous": "There are no previous songs in the queue.",
     "no_song": "There are no songs in the queue.",
     "already_paused": "The song is already paused.",
-    "user_not_in_voice_channel": "You are not connected to a voice channel."
+    "user_not_in_voice_channel": "You are not connected to a voice channel.",
+    "playback_failed": "Couldn't play **{title}** - skipping.",
+    "unknown_track": "this track",
+    "playback_failed_reasons": {
+      "botcheck": "YouTube is rate-limiting this node right now. Usually clears on its own within a few hours.",
+      "cipher": "YouTube changed its player script and the node can't decode stream URLs. The youtube-source plugin needs updating, or a remote cipher configured.",
+      "noformats": "YouTube didn't return a playable audio stream for this track (SABR-only response).",
+      "client": "YouTube rejected every client identity the node impersonates. The youtube-source plugin needs updating.",
+      "restricted": "This track is age-restricted, private, or blocked in the node's region.",
+      "unknown": "The audio node reported an error. Check the bot logs for details."
+    }
   },
   "trackStart": {
     "now_playing": "Now Playing",

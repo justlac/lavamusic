@@ -1,5 +1,11 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: <> */
-import type { Player, Track, UnresolvedTrack } from "lavalink-client";
+import type {
+	Player,
+	SearchPlatform,
+	Track,
+	TrackRequester,
+	UnresolvedTrack,
+} from "lavalink-client";
 import { env } from "../../env";
 import { I18N, t } from "../../structures/I18n";
 import logger from "../../structures/Logger";
@@ -86,6 +92,65 @@ function isTrackDuplicate(player: Player, track: TrackLike, autoplayHistory: Set
 type AutoplayClientData = { fromAutoplay?: boolean; autoplaySeed?: string };
 
 /**
+ * Autoplay searches the same "Artist - Title" strings over and over across a
+ * session, and every one of those is a YouTube request that counts against the
+ * node's bot-check reputation. Caching them removes the repeats entirely.
+ *
+ * Only fully resolved tracks are cached: an UnresolvedTrack carries a
+ * `resolve()` function, which would not survive being cloned.
+ *
+ * Encoded tracks are stable - the time-limited stream URL is resolved at play
+ * time, not stored here - so entries do not go stale.
+ */
+const SEARCH_CACHE_LIMIT = 300;
+const searchCache = new Map<string, Track>();
+
+/**
+ * Resolves one autoplay candidate to a playable track, serving repeats from the
+ * in-process cache. The returned track is always a fresh copy, so the caller
+ * can safely attach its own requester and mutate `pluginInfo.clientData`.
+ */
+async function resolveCandidate(
+	player: Player,
+	query: string,
+	source: SearchPlatform,
+	requester: TrackRequester | undefined,
+): Promise<{ track: Track | UnresolvedTrack | null; cached: boolean }> {
+	const key = `${source}::${query.toLowerCase().trim()}`;
+
+	const cached = searchCache.get(key);
+	if (cached) {
+		// Refresh LRU position.
+		searchCache.delete(key);
+		searchCache.set(key, cached);
+		const copy = structuredClone(cached);
+		copy.requester = requester;
+		return { track: copy, cached: true };
+	}
+
+	const result = await player.search({ query, source }, requester).catch((error: unknown) => {
+		logger.warn(`[Autoplay] Search failed for "${query}": ${error}`);
+		return null;
+	});
+
+	const track = result?.tracks?.[0];
+	if (!track) return { track: null, cached: false };
+
+	// Skip caching UnresolvedTracks - see the note above.
+	if (!("resolve" in track)) {
+		const store = structuredClone(track as Track);
+		store.requester = undefined;
+		if (searchCache.size >= SEARCH_CACHE_LIMIT) {
+			const oldest = searchCache.keys().next().value;
+			if (oldest !== undefined) searchCache.delete(oldest);
+		}
+		searchCache.set(key, store);
+	}
+
+	return { track, cached: false };
+}
+
+/**
  * Renders the "Added by Autoplay" note for a now-playing embed, or "" for a
  * track someone actually requested.
  *
@@ -138,6 +203,17 @@ export async function autoPlayFunction(player: Player, lastTrack?: Track): Promi
 	/** Keep the dedupe window bounded. */
 	const HISTORY_LIMIT = 50;
 
+	// Two callers can reach this at once: the /autoplay command fires it
+	// un-awaited to seed the queue, and lavalink-client fires it from
+	// onEmptyQueue. Overlapping runs queued twice as many tracks, spent twice
+	// the API budget, and could both pick the same candidate - the dedupe check
+	// happens before the awaits, so neither run sees the other's picks.
+	if (player.get<boolean>("autoplayInFlight")) {
+		logger.debug?.("[Autoplay] Already running for this player - skipping duplicate run.");
+		return;
+	}
+	player.set("autoplayInFlight", true);
+
 	try {
 		let autoplayHistory = player.get<Set<string>>("autoplayHistory");
 		if (!autoplayHistory) {
@@ -173,26 +249,22 @@ export async function autoPlayFunction(player: Player, lastTrack?: Track): Promi
 
 		const tracksToAdd: (Track | UnresolvedTrack)[] = [];
 		let attempts = 0;
+		let cacheHits = 0;
 
 		for (const candidate of viable) {
 			if (tracksToAdd.length >= MAX_TRACKS || attempts >= MAX_SEARCH_ATTEMPTS) break;
 			attempts++;
 
-			const searchResult = await player
-				.search(
-					{
-						query: candidate.query,
-						source: player.get("searchPlatform") || "youtubemusic",
-					},
-					lastTrack.requester,
-				)
-				.catch((error: unknown) => {
-					logger.warn(`[Autoplay] Search failed for "${candidate.query}": ${error}`);
-					return null;
-				});
-
-			const track = searchResult?.tracks?.[0];
+			const source = (player.get<SearchPlatform>("searchPlatform") ??
+				"youtubemusic") as SearchPlatform;
+			const { track, cached } = await resolveCandidate(
+				player,
+				candidate.query,
+				source,
+				lastTrack.requester,
+			);
 			if (!track) continue;
+			if (cached) cacheHits++;
 
 			// Re-check against the resolved track: the search may have landed on
 			// something already queued under a different title.
@@ -218,12 +290,16 @@ export async function autoPlayFunction(player: Player, lastTrack?: Track): Promi
 
 		if (tracksToAdd.length > 0) {
 			await player.queue.add(tracksToAdd);
-			logger.info(`[Autoplay] Queued ${tracksToAdd.length} track(s) from ${attempts} search(es)`);
+			logger.info(
+				`[Autoplay] Queued ${tracksToAdd.length} track(s) from ${attempts} search(es), ${cacheHits} served from cache`,
+			);
 		} else {
 			logger.warn(`[Autoplay] No suitable tracks after ${attempts} search(es)`);
 		}
 	} catch (error) {
 		logger.error(`[Autoplay] Failed: ${error}`);
+	} finally {
+		player.set("autoplayInFlight", false);
 	}
 }
 
