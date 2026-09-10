@@ -6,7 +6,10 @@ export default class TrackException extends Event {
 	constructor(client: Lavamusic, file: string) {
 		super(client, file, {
 			type: LavamusicEventType.Player,
-			name: "trackException",
+			// lavalink-client emits "trackError", not "trackException" - with the
+			// old name this handler was registered against an event that never
+			// fires, so playback failures were silently unlogged.
+			name: "trackError",
 		});
 	}
 

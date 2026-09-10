@@ -1,7 +1,6 @@
 import { type ButtonInteraction, MessageFlags } from "discord.js";
 import { Component, type Lavamusic } from "../../structures";
 import { I18N, t } from "../../structures/I18n";
-import { autoPlayFunction } from "../../utils/functions/player";
 import { handlePlayerInteraction, updatePlayerMessage } from "../../utils/PlayerUIUtils";
 
 export default class SkipButton extends Component {
@@ -18,7 +17,6 @@ export default class SkipButton extends Component {
 
 		const autoplay = player.get<boolean>("autoplay");
 		const currentTrack = player.queue.current;
-		const willBeEmpty = player.queue.tracks.length === 0;
 
 		if (player.queue.tracks.length > 0) {
 			await interaction.deferUpdate();
@@ -35,16 +33,11 @@ export default class SkipButton extends Component {
 				// Silently ignore - message may have been deleted by TrackEnd event
 			}
 		} else if (autoplay && currentTrack) {
-			// Queue is empty but autoplay is on - skip and trigger autoplay
+			// Queue is empty but autoplay is on. skip() throws RangeError on an
+			// empty queue (and was not awaited here, so it surfaced as an
+			// unhandled rejection) - stopPlaying triggers the next track instead.
 			await interaction.deferUpdate();
-			player.skip();
-
-			// Trigger autoplay immediately
-			setTimeout(() => {
-				autoPlayFunction(player, currentTrack).catch((error) => {
-					console.error("[Skip Button] Failed to trigger autoplay:", error);
-				});
-			}, 100);
+			await player.stopPlaying(false, true);
 
 			// Wrap in try-catch to handle message deletion race condition
 			try {
