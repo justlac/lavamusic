@@ -4,41 +4,7 @@ import { I18N, t } from "../../structures/I18n";
 import { Event, type Lavamusic } from "../../structures/index";
 import logger from "../../structures/Logger";
 import { LavamusicEventType } from "../../types/events";
-
-/**
- * The failure classes worth telling a human about. Each maps to one of the four
- * gates a YouTube playback request has to clear, so the message names what
- * actually broke instead of dumping a Java exception into chat.
- */
-type FailureKind = "botcheck" | "cipher" | "noformats" | "client" | "restricted" | "unknown";
-
-/** Matched against the Lavalink exception message, most specific first. */
-const FAILURE_PATTERNS: Array<{ kind: FailureKind; pattern: RegExp }> = [
-	// Gate 3 - IP reputation. Usually transient, and not the user's fault.
-	{ kind: "botcheck", pattern: /sign in to confirm|not a bot/i },
-	// Gate 2 - the plugin could not read YouTube's signature functions.
-	{ kind: "cipher", pattern: /must find sig|scriptextraction|cipher|signature/i },
-	// Gate 4 - response carried no plain-URL format (SABR-only).
-	{ kind: "noformats", pattern: /could not find formats|no playable|sabr/i },
-	// Gate 1 - the impersonated client identity was rejected.
-	{
-		kind: "client",
-		pattern: /page needs to be reloaded|failed_precondition|all ?clients ?failed|http 400/i,
-	},
-	// Not a gate - the video itself is unavailable to anyone anonymous.
-	{
-		kind: "restricted",
-		pattern: /requires login|age.?restrict|private|unavailable|copyright|blocked/i,
-	},
-];
-
-function classifyFailure(message?: string | null): FailureKind {
-	if (!message) return "unknown";
-	for (const { kind, pattern } of FAILURE_PATTERNS) {
-		if (pattern.test(message)) return kind;
-	}
-	return "unknown";
-}
+import { classifyFailure, type FailureKind } from "../../utils/YoutubeFailure";
 
 /**
  * Don't flood the channel. A broken node fails every track in the queue back to

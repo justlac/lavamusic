@@ -10,7 +10,12 @@ import { env } from "../../env";
 import { I18N, t } from "../../structures/I18n";
 import logger from "../../structures/Logger";
 import type { Requester } from "../../types";
-import { getArtistTopTracks, getSimilarTracks, type TrackLike } from "../LastFm";
+import {
+	getArtistTopTracks,
+	getSimilarTracks,
+	mergeSeedCandidates,
+	type TrackLike,
+} from "../LastFm";
 
 /**
  * Transforms a requester into a standardized requester object.
@@ -202,6 +207,8 @@ export async function autoPlayFunction(player: Player, lastTrack?: Track): Promi
 	const MAX_SEARCH_ATTEMPTS = 12;
 	/** Keep the dedupe window bounded. */
 	const HISTORY_LIMIT = 50;
+	/** How many recent tracks to seed the recommendation from. */
+	const SEED_COUNT = 3;
 
 	// Two callers can reach this at once: the /autoplay command fires it
 	// un-awaited to seed the queue, and lavalink-client fires it from
@@ -221,8 +228,22 @@ export async function autoPlayFunction(player: Player, lastTrack?: Track): Promi
 			player.set("autoplayHistory", autoplayHistory);
 		}
 
-		// One call. Already sorted by `match`, highest first.
-		let candidates = await getSimilarTracks(lastTrack, lastfmApiKey, 30);
+		// Seed from the last few tracks, not just the most recent one, and let
+		// agreement between them do the work the old per-candidate genre check
+		// did - at 2-3 calls instead of ~30, nearly all of them cache hits since
+		// these same tracks were seeds on previous runs.
+		const seedTracks: TrackLike[] = [lastTrack];
+		for (const previous of [...player.queue.previous].reverse()) {
+			if (seedTracks.length >= SEED_COUNT) break;
+			const fingerprint = getTrackFingerprint(previous);
+			if (seedTracks.some((seed) => getTrackFingerprint(seed) === fingerprint)) continue;
+			seedTracks.push(previous);
+		}
+
+		const seedResults = await Promise.all(
+			seedTracks.map((seed) => getSimilarTracks(seed, lastfmApiKey, 30)),
+		);
+		let candidates = mergeSeedCandidates(seedResults);
 
 		// Obscure or very new tracks often have no similar-track data at all;
 		// fall back to the artist's top tracks rather than giving up.
@@ -291,7 +312,8 @@ export async function autoPlayFunction(player: Player, lastTrack?: Track): Promi
 		if (tracksToAdd.length > 0) {
 			await player.queue.add(tracksToAdd);
 			logger.info(
-				`[Autoplay] Queued ${tracksToAdd.length} track(s) from ${attempts} search(es), ${cacheHits} served from cache`,
+				`[Autoplay] Queued ${tracksToAdd.length} track(s) from ${seedTracks.length} seed(s), ` +
+					`${attempts} search(es), ${cacheHits} served from cache`,
 			);
 		} else {
 			logger.warn(`[Autoplay] No suitable tracks after ${attempts} search(es)`);

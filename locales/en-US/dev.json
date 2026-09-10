@@ -65,5 +65,11 @@
       "success": "Successfully destroyed **{count}** invite(s) created by me in **{guildName}**.",
       "not_found": "No invites created by me were found in this guild."
     }
+  },
+  "ytdiag": {
+    "description": "Probe each YouTube client on the audio node and report which gate fails",
+    "no_node": "No connected Lavalink node to probe.",
+    "probing": "Probing each YouTube client against the node — this takes up to a minute.",
+    "summary": "**YouTube health: {working}/{total} clients streaming.**"
   }
 }

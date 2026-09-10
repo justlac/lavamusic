@@ -14,6 +14,23 @@ const REQUEST_TIMEOUT_MS = 5000;
 const TAG_CACHE_LIMIT = 500;
 const tagCache = new Map<string, string[]>();
 
+/**
+ * Similar-track lookups are cached too, which is what makes multi-seed autoplay
+ * cheap: the seeds for this run are mostly the tracks that were already seeds on
+ * previous runs, so in steady state only the newest seed is a fresh call.
+ */
+const SIMILAR_CACHE_LIMIT = 300;
+const similarCache = new Map<string, SimilarCandidate[]>();
+
+function remember<T>(cache: Map<string, T>, limit: number, key: string, value: T): T {
+	if (cache.size >= limit) {
+		const oldest = cache.keys().next().value;
+		if (oldest !== undefined) cache.delete(oldest);
+	}
+	cache.set(key, value);
+	return value;
+}
+
 interface LastFmSimilarTrack {
 	name: string;
 	artist: { name: string };
@@ -137,13 +154,7 @@ export async function getTrackTags(track: TrackLike, apiKey: string): Promise<st
 	const tags = (data?.track?.toptags?.tag ?? []).slice(0, 5).map((tag) => tag.name.toLowerCase());
 
 	// Cache negatives too - a track with no tags will not grow them mid-session.
-	if (tagCache.size >= TAG_CACHE_LIMIT) {
-		const oldest = tagCache.keys().next().value;
-		if (oldest !== undefined) tagCache.delete(oldest);
-	}
-	tagCache.set(cacheKey, tags);
-
-	return tags;
+	return remember(tagCache, TAG_CACHE_LIMIT, cacheKey, tags);
 }
 
 /**
@@ -184,6 +195,10 @@ export async function getSimilarTracks(
 	const artistName = cleanArtistName(track.info.author ?? "");
 	if (!trackName || !artistName) return [];
 
+	const cacheKey = `${artistName.toLowerCase()}::${trackName.toLowerCase()}::${limit}`;
+	const cached = similarCache.get(cacheKey);
+	if (cached) return cached;
+
 	const data = await lastfmGet<LastFmSimilarResponse>("track.getsimilar", apiKey, {
 		artist: artistName,
 		track: trackName,
@@ -191,9 +206,11 @@ export async function getSimilarTracks(
 	});
 
 	const raw = data?.similartracks?.track ?? [];
-	if (raw.length === 0) return [];
+	// A failed request must not be cached as "no similar tracks".
+	if (data === null) return [];
+	if (raw.length === 0) return remember(similarCache, SIMILAR_CACHE_LIMIT, cacheKey, []);
 
-	return raw
+	const candidates = raw
 		.filter((t) => t.name && t.artist?.name)
 		.filter(
 			(t) =>
@@ -209,6 +226,51 @@ export async function getSimilarTracks(
 			match: Number.parseFloat(t.match ?? "0") || 0,
 		}))
 		.sort((a, b) => b.match - a.match);
+
+	return remember(similarCache, SIMILAR_CACHE_LIMIT, cacheKey, candidates);
+}
+
+/**
+ * Merges similar-track candidates from several seed tracks into one ranking.
+ *
+ * Weighted consensus replaces the old per-candidate genre check: a track that
+ * several recent seeds agree on scores higher than one only the newest seed
+ * suggested, which is what keeps a long autoplay chain from drifting - at the
+ * cost of 2-3 cached Last.fm calls instead of ~30 uncached ones.
+ *
+ * @param seeds Candidate lists, most recent seed first.
+ * @param weights Per-seed multipliers; the default decays with age.
+ */
+export function mergeSeedCandidates(
+	seeds: SimilarCandidate[][],
+	weights: number[] = [1, 0.6, 0.4],
+): SimilarCandidate[] {
+	const merged = new Map<string, SimilarCandidate & { seedCount: number }>();
+
+	seeds.forEach((candidates, seedIndex) => {
+		const weight = weights[seedIndex] ?? 0.25;
+		for (const candidate of candidates) {
+			const key = `${candidate.artist.toLowerCase()}::${candidate.title.toLowerCase()}`;
+			const existing = merged.get(key);
+			if (existing) {
+				existing.match += candidate.match * weight;
+				existing.seedCount++;
+			} else {
+				merged.set(key, {
+					...candidate,
+					match: candidate.match * weight,
+					seedCount: 1,
+				});
+			}
+		}
+	});
+
+	return (
+		[...merged.values()]
+			// Agreement across seeds outranks a single high score.
+			.sort((a, b) => b.seedCount - a.seedCount || b.match - a.match)
+			.map(({ seedCount: _seedCount, ...candidate }) => candidate)
+	);
 }
 
 /**

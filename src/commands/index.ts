@@ -16,6 +16,7 @@ import GuildList from "./dev/GuildList";
 import MoveNode from "./dev/MoveNode";
 import Restart from "./dev/Restart";
 import Shutdown from "./dev/Shutdown";
+import YoutubeHealth from "./dev/YoutubeHealth";
 import _8d from "./filters/8d";
 import BassBoost from "./filters/BassBoost";
 import Karaoke from "./filters/Karaoke";
@@ -82,6 +83,7 @@ export const CommandList = [
 	MoveNode,
 	Restart,
 	Shutdown,
+	YoutubeHealth,
 	_8d,
 	BassBoost,
 	Karaoke,
