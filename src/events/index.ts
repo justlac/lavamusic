@@ -47,5 +47,5 @@ export const EventList = [
 	QueueEnd,
 	TrackEnd,
 	TrackException,
-	TrackStart
+	TrackStart,
 ];

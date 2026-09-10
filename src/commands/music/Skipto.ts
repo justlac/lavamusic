@@ -79,7 +79,7 @@ export default class Skipto extends Command {
 			return await ctx.sendMessage({
 				embeds: [embed.setColor(this.client.color.main).setDescription(description)],
 			});
-		} catch (error) {
+		} catch {
 			// Silently ignore - message may have been deleted by TrackEnd event
 		}
 	}

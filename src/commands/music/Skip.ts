@@ -72,7 +72,7 @@ export default class Skip extends Command {
 		// Wrap reaction in try-catch to handle message deletion race condition
 		try {
 			await ctx.message?.react("👍");
-		} catch (error) {
+		} catch {
 			// Silently ignore - message may have been deleted by TrackEnd event
 		}
 	}

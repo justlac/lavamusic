@@ -1,6 +1,35 @@
 const geniusLyrics = require("genius-lyrics-api");
 
 import { env } from "../env";
+import logger from "../structures/Logger";
+
+/**
+ * genius-lyrics-api uses axios with no default timeout, so a stalled Genius
+ * request would hang the /lyrics command indefinitely, leaving the "loading"
+ * message up forever. We cannot pass a signal into the library, so bound it
+ * from the outside instead.
+ */
+const REQUEST_TIMEOUT_MS = 8000;
+
+async function withTimeout<T>(label: string, work: Promise<T>): Promise<T | null> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	try {
+		return await Promise.race([
+			work,
+			new Promise<never>((_, reject) => {
+				timer = setTimeout(
+					() => reject(new Error(`timed out after ${REQUEST_TIMEOUT_MS}ms`)),
+					REQUEST_TIMEOUT_MS,
+				);
+			}),
+		]);
+	} catch (error) {
+		logger.warn(`[Genius] ${label} failed: ${error}`);
+		return null;
+	} finally {
+		if (timer) clearTimeout(timer);
+	}
+}
 
 export interface GeniusSong {
 	id: number;
@@ -58,30 +87,21 @@ export function cleanArtistName(artist: string): string {
  */
 export async function getGeniusLyrics(options: GeniusOptions): Promise<string | null> {
 	if (!env.GENIUS_API) {
-		console.error("[Genius] GENIUS_API key is not configured in .env");
+		logger.warn("[Genius] GENIUS_API is not set - lyrics are unavailable.");
 		return null;
 	}
 
-	try {
-		const cleanTitle = cleanTrackName(options.title);
-		const cleanArtist = cleanArtistName(options.artist);
-
-		const lyrics = await geniusLyrics.getLyrics({
+	const lyrics = await withTimeout<string>(
+		"getLyrics",
+		geniusLyrics.getLyrics({
 			apiKey: env.GENIUS_API,
-			title: cleanTitle,
-			artist: cleanArtist,
+			title: cleanTrackName(options.title),
+			artist: cleanArtistName(options.artist),
 			optimizeQuery: true,
-		});
+		}),
+	);
 
-		if (lyrics) {
-			return lyrics;
-		}
-
-		return null;
-	} catch (error) {
-		console.error(`[Genius] Error fetching lyrics: ${error}`);
-		return null;
-	}
+	return lyrics ?? null;
 }
 
 /**
@@ -91,28 +111,19 @@ export async function getGeniusLyrics(options: GeniusOptions): Promise<string | 
  */
 export async function getGeniusSong(options: GeniusOptions): Promise<GeniusSong | null> {
 	if (!env.GENIUS_API) {
-		console.error("[Genius] GENIUS_API key is not configured in .env");
+		logger.warn("[Genius] GENIUS_API is not set - lyrics are unavailable.");
 		return null;
 	}
 
-	try {
-		const cleanTitle = cleanTrackName(options.title);
-		const cleanArtist = cleanArtistName(options.artist);
-
-		const song = await geniusLyrics.getSong({
+	const song = await withTimeout<GeniusSong>(
+		"getSong",
+		geniusLyrics.getSong({
 			apiKey: env.GENIUS_API,
-			title: cleanTitle,
-			artist: cleanArtist,
+			title: cleanTrackName(options.title),
+			artist: cleanArtistName(options.artist),
 			optimizeQuery: true,
-		});
+		}),
+	);
 
-		if (song) {
-			return song;
-		}
-
-		return null;
-	} catch (error) {
-		console.error(`[Genius] Error fetching song: ${error}`);
-		return null;
-	}
+	return song ?? null;
 }

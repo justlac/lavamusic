@@ -15,8 +15,15 @@ services:
     volumes:
       # Mount application.yml from the same directory or use environment variables
       - ./Lavalink/application.yml:/opt/Lavalink/application.yml
-      # Plugins are intentionally NOT persisted so latest.release is re-resolved on every restart
-      # - ./Lavalink/plugins/:/opt/Lavalink/plugins/
+      # Plugins ARE persisted. The youtube-source version is pinned to a commit
+      # hash in application.yml (see Lavalink/example.application.yml), so there
+      # is nothing to re-resolve - and an unpersisted plugins dir means a maven
+      # outage stops the node from starting at all.
+      # NOTE: `latest.release` is NOT usable here: it can only ever reach the
+      # newest tagged release, and YouTube fixes land on youtube-source's main
+      # branch weeks before a release is cut. Pin the hash instead.
+      # Make sure the host dir is writable by uid/gid 322.
+      - ./Lavalink/plugins/:/opt/Lavalink/plugins/
     networks:
       - lavalink
     ports:

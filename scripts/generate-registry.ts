@@ -96,7 +96,9 @@ function generateIndex(type: RegistryType) {
 		imports.join("\n"),
 		"",
 		`export const ${config.exportName} = [`,
-		`\t${exports.join(",\n\t")}`,
+		// Trailing comma so the generated file matches biome's formatter and
+		// `biome check src/` stays clean without an ignore.
+		`${exports.map((name) => `\t${name},`).join("\n")}`,
 		"];",
 		"",
 	].join("\n");

@@ -98,7 +98,7 @@ export async function updatePlayerMessage(
 			embeds: [embed],
 			components: [createButtonRow(player)],
 		});
-	} catch (error) {
+	} catch {
 		// Silently ignore - message may have been deleted by TrackEnd event
 	}
 }

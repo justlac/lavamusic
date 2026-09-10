@@ -29,7 +29,7 @@ export default class SkipButton extends Component {
 					player,
 					t(I18N.player.trackStart.skipped_by, { user: interaction.user.tag }),
 				);
-			} catch (error) {
+			} catch {
 				// Silently ignore - message may have been deleted by TrackEnd event
 			}
 		} else if (autoplay && currentTrack) {
@@ -47,7 +47,7 @@ export default class SkipButton extends Component {
 					player,
 					t(I18N.player.trackStart.skipped_by, { user: interaction.user.tag }),
 				);
-			} catch (error) {
+			} catch {
 				// Silently ignore - message may have been deleted by TrackEnd event
 			}
 		} else {

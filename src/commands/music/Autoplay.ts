@@ -1,5 +1,6 @@
 import { I18N } from "../../structures/I18n";
 import { Command, type Context, type Lavamusic } from "../../structures/index";
+import logger from "../../structures/Logger";
 import { autoPlayFunction } from "../../utils/functions/player";
 import { EmbedLinks, ReadMessageHistory, SendMessages, ViewChannel } from "../../utils/Permissions";
 
@@ -66,8 +67,10 @@ export default class Autoplay extends Command {
 			const currentTrack = player.queue.current;
 			if (currentTrack) {
 				// Run autoplay function asynchronously without blocking the response
+				// Deliberately not awaited: seeding can take a second or two and the
+				// command should acknowledge immediately.
 				autoPlayFunction(player, currentTrack).catch((error) => {
-					console.error("[Autoplay Command] Error queuing initial tracks:", error);
+					logger.error(`[Autoplay] Seeding the queue on enable failed: ${error}`);
 				});
 			}
 		}
