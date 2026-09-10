@@ -1,6 +1,7 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: <> */
 import type { Player, Track, UnresolvedTrack } from "lavalink-client";
 import { env } from "../../env";
+import { I18N, t } from "../../structures/I18n";
 import logger from "../../structures/Logger";
 import type { Requester } from "../../types";
 import { getArtistTopTracks, getSimilarTracks, type TrackLike } from "../LastFm";
@@ -80,6 +81,28 @@ function isTrackDuplicate(player: Player, track: TrackLike, autoplayHistory: Set
 
 	return false;
 }
+
+/** Metadata autoplay stamps onto the tracks it queues, read back by the UI. */
+type AutoplayClientData = { fromAutoplay?: boolean; autoplaySeed?: string };
+
+/**
+ * Renders the "Added by Autoplay" note for a now-playing embed, or "" for a
+ * track someone actually requested.
+ *
+ * Shared by both now-playing renderers (the normal embed and the setup panel)
+ * so an autoplayed track is labelled identically wherever it is displayed.
+ */
+export function autoplayNote(track: Track | UnresolvedTrack, locale?: string): string {
+	const data = track.pluginInfo?.clientData as AutoplayClientData | undefined;
+	if (!data?.fromAutoplay) return "";
+
+	const text = data.autoplaySeed
+		? t(I18N.player.trackStart.autoplay_from, { lng: locale, seed: data.autoplaySeed })
+		: t(I18N.player.trackStart.autoplay, { lng: locale });
+
+	return `\n-# ${text}`;
+}
+
 /**
  * Intelligent autoplay: queues tracks similar to the one that just finished.
  *
@@ -175,9 +198,12 @@ export async function autoPlayFunction(player: Player, lastTrack?: Track): Promi
 			// something already queued under a different title.
 			if (isTrackDuplicate(player, track, autoplayHistory)) continue;
 
+			// `autoplaySeed` is what the UI shows as "based on ..." so the origin of
+			// an autoplayed track is visible in Discord, not just in the logs.
 			track.pluginInfo.clientData = {
 				...(track.pluginInfo.clientData || {}),
 				fromAutoplay: true,
+				autoplaySeed: [lastTrack.info.author, lastTrack.info.title].filter(Boolean).join(" - "),
 			};
 
 			autoplayHistory.add(getTrackFingerprint(track));

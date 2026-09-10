@@ -1,6 +1,5 @@
 import { I18N } from "../../structures/I18n";
 import { Command, type Context, type Lavamusic } from "../../structures/index";
-import { autoPlayFunction } from "../../utils/functions/player";
 import { EmbedLinks, ReadMessageHistory, SendMessages, ViewChannel } from "../../utils/Permissions";
 
 export default class Skipto extends Command {
@@ -61,30 +60,24 @@ export default class Skipto extends Command {
 		}
 
 		const autoplay = player.get<boolean>("autoplay");
-		const currentTrack = player.queue.current;
 		const willBeEmpty = num >= player.queue.tracks.length;
 
-		player.skip(num);
+		await player.skip(num);
 
-		// If autoplay is enabled and we're skipping to the last track (queue will be empty after), trigger autoplay
-		if (autoplay && willBeEmpty && currentTrack) {
-			setTimeout(() => {
-				autoPlayFunction(player, currentTrack).catch((error) => {
-					console.error("[Skipto] Failed to trigger autoplay:", error);
-				});
-			}, 100);
+		// Autoplay is NOT triggered here on purpose. lavalink-client is wired with
+		// onEmptyQueue.autoPlayFunction, so when the queue actually empties it calls
+		// autoplay itself, seeded with the track that just ended. Doing it here as
+		// well seeded from the PRE-skip track (wrong reference - you skipped past it)
+		// and spent a second full round of API calls.
+		let description = ctx.locale(I18N.commands.skipto.messages.skipped_to, { number: num });
+		if (autoplay && willBeEmpty) {
+			description += `\n-# ${ctx.locale(I18N.commands.skipto.messages.autoplay_pending)}`;
 		}
 
 		// Wrap in try-catch to handle message deletion race condition
 		try {
 			return await ctx.sendMessage({
-				embeds: [
-					embed.setColor(this.client.color.main).setDescription(
-						ctx.locale(I18N.commands.skipto.messages.skipped_to, {
-							number: num,
-						}),
-					),
-				],
+				embeds: [embed.setColor(this.client.color.main).setDescription(description)],
 			});
 		} catch (error) {
 			// Silently ignore - message may have been deleted by TrackEnd event

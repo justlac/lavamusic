@@ -12,6 +12,7 @@ import type { Lavamusic } from "../structures/index";
 import logger from "../structures/Logger";
 import type { Requester } from "../types";
 import { getButtons } from "./Buttons";
+import { autoplayNote } from "./functions/player";
 
 /**
  * A function that will generate an embed based on the player's current track.
@@ -28,14 +29,15 @@ function neb(embed: EmbedBuilder, player: Player, client: Lavamusic, locale: str
 		client.user!.displayAvatarURL({ extension: "png" });
 	const icon = player.queue.current.info.artworkUrl || client.config.links.img;
 
-	const description = t(I18N.player.setupStart.description, {
-		lng: locale,
-		title: player.queue.current.info.title,
-		uri: player.queue.current.info.uri,
-		author: player.queue.current.info.author,
-		length: client.utils.formatTime(player.queue.current.info.duration),
-		requester: (player.queue.current.requester as Requester).id,
-	});
+	const description =
+		t(I18N.player.setupStart.description, {
+			lng: locale,
+			title: player.queue.current.info.title,
+			uri: player.queue.current.info.uri,
+			author: player.queue.current.info.author,
+			length: client.utils.formatTime(player.queue.current.info.duration),
+			requester: (player.queue.current.requester as Requester).id,
+		}) + autoplayNote(player.queue.current, locale);
 	return embed
 		.setAuthor({
 			name: t(I18N.player.setupStart.now_playing, { lng: locale }),
@@ -187,7 +189,7 @@ async function trackStart(
 				author: track.info.author,
 				length: client.utils.formatTime(track.info.duration),
 				requester: (track.requester as Requester).id,
-			}),
+			}) + autoplayNote(track, locale),
 		)
 		.setColor(client.color.main);
 
@@ -264,7 +266,7 @@ async function updateSetup(client: Lavamusic, guild: Guild, locale: string): Pro
 						author: player.queue.current.info.author,
 						length: client.utils.formatTime(player.queue.current.info.duration),
 						requester: (player.queue.current.requester as Requester).id,
-					}),
+					}) + autoplayNote(player.queue.current, locale),
 				)
 				.setColor(client.color.main);
 

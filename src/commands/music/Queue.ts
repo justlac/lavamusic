@@ -55,6 +55,10 @@ export default class Queue extends Command {
 		const songStrings: string[] = [];
 		for (let i = 0; i < player.queue.tracks.length; i++) {
 			const track = player.queue.tracks[i];
+			// Tag autoplay picks so a queue that filled itself is distinguishable
+			// from one people actually requested.
+			const fromAutoplay = (track.pluginInfo?.clientData as { fromAutoplay?: boolean } | undefined)
+				?.fromAutoplay;
 			songStrings.push(
 				ctx.locale(I18N.commands.queue.track_info, {
 					index: i + 1,
@@ -64,7 +68,7 @@ export default class Queue extends Command {
 					duration: track.info.isStream
 						? ctx.locale(I18N.commands.queue.live)
 						: client.utils.formatTime(track.info.duration ?? 0),
-				}),
+				}) + (fromAutoplay ? ` ${ctx.locale(I18N.commands.queue.autoplay_tag)}` : ""),
 			);
 		}
 		let chunks = client.utils.chunk(songStrings, 10);
