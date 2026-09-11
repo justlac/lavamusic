@@ -1,17 +1,44 @@
-import type { Track } from "lavalink-client";
+import logger from "../structures/Logger";
+
+/**
+ * Minimal shape shared by `Track` and `UnresolvedTrack`. `UnresolvedTrackInfo`
+ * extends `Partial<TrackInfo>` and only guarantees `title`, so `author` must be
+ * treated as optional everywhere - reading it unguarded used to throw.
+ */
+export type TrackLike = { info: { title: string; author?: string } };
+
+/** Every Last.fm request is bounded - an unbounded fetch here stalls autoplay. */
+const REQUEST_TIMEOUT_MS = 5000;
+
+/** Tag lookups are stable, so cache them for the process lifetime. */
+const TAG_CACHE_LIMIT = 500;
+const tagCache = new Map<string, string[]>();
+
+/**
+ * Similar-track lookups are cached too, which is what makes multi-seed autoplay
+ * cheap: the seeds for this run are mostly the tracks that were already seeds on
+ * previous runs, so in steady state only the newest seed is a fresh call.
+ */
+const SIMILAR_CACHE_LIMIT = 300;
+const similarCache = new Map<string, SimilarCandidate[]>();
+
+function remember<T>(cache: Map<string, T>, limit: number, key: string, value: T): T {
+	if (cache.size >= limit) {
+		const oldest = cache.keys().next().value;
+		if (oldest !== undefined) cache.delete(oldest);
+	}
+	cache.set(key, value);
+	return value;
+}
 
 interface LastFmSimilarTrack {
 	name: string;
-	artist: {
-		name: string;
-	};
+	artist: { name: string };
 	match?: string;
 }
 
 interface LastFmSimilarResponse {
-	similartracks?: {
-		track: LastFmSimilarTrack[];
-	};
+	similartracks?: { track: LastFmSimilarTrack[] };
 	error?: number;
 	message?: string;
 }
@@ -21,20 +48,29 @@ interface LastFmTag {
 	count?: number;
 }
 
-interface LastFmTrackInfo {
-	name: string;
-	artist: {
-		name: string;
-	};
-	toptags?: {
-		tag: LastFmTag[];
-	};
-}
-
 interface LastFmTrackInfoResponse {
-	track?: LastFmTrackInfo;
+	track?: {
+		name: string;
+		artist: { name: string };
+		toptags?: { tag: LastFmTag[] };
+	};
 	error?: number;
 	message?: string;
+}
+
+interface LastFmTopTracksResponse {
+	toptracks?: { track: Array<{ name?: string; artist?: { name?: string } }> };
+	error?: number;
+	message?: string;
+}
+
+/** A similar-track candidate. `match` is Last.fm's own 0..1 similarity score. */
+export interface SimilarCandidate {
+	query: string;
+	artist: string;
+	title: string;
+	/** Numeric form of Last.fm's `match`; 0 when absent or unparseable. */
+	match: number;
 }
 
 /**
@@ -58,207 +94,212 @@ export function cleanArtistName(artistName: string): string {
 }
 
 /**
- * Fetches tags/genres for a track from Last.fm
- * @param track The track to get tags for
- * @param apiKey The Last.fm API key
- * @returns Array of genre tags
+ * Single entry point for Last.fm calls. Applies the timeout and turns every
+ * failure - network, HTTP, API-level - into `null` so callers never throw into
+ * the player.
  */
-export async function getTrackTags(track: Track, apiKey: string): Promise<string[]> {
-	if (!apiKey || apiKey === "") {
-		return [];
-	}
-
-	const trackName = cleanTrackName(track.info.title);
-	const artistName = cleanArtistName(track.info.author);
+async function lastfmGet<T>(
+	method: string,
+	apiKey: string,
+	params: Record<string, string>,
+): Promise<T | null> {
+	const url = new URL("https://ws.audioscrobbler.com/2.0/");
+	url.searchParams.set("method", method);
+	url.searchParams.set("api_key", apiKey);
+	url.searchParams.set("format", "json");
+	url.searchParams.set("autocorrect", "1");
+	for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
 	try {
-		const url = new URL("https://ws.audioscrobbler.com/2.0/");
-		url.searchParams.append("method", "track.getInfo");
-		url.searchParams.append("artist", artistName);
-		url.searchParams.append("track", trackName);
-		url.searchParams.append("api_key", apiKey);
-		url.searchParams.append("format", "json");
-		url.searchParams.append("autocorrect", "1");
-
-		const response = await fetch(url.toString());
-
+		const response = await fetch(url.toString(), {
+			signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+		});
 		if (!response.ok) {
-			return [];
+			logger.warn(`[LastFm] ${method} failed with HTTP ${response.status}`);
+			return null;
 		}
-
-		const data: LastFmTrackInfoResponse = await response.json();
-
-		if (data.error || !data.track?.toptags?.tag) {
-			return [];
+		const data = (await response.json()) as T & { error?: number; message?: string };
+		if (data?.error) {
+			logger.warn(`[LastFm] ${method} API error ${data.error}: ${data.message}`);
+			return null;
 		}
-
-		// Get top 5 tags
-		const tags = data.track.toptags.tag.slice(0, 5).map((tag) => tag.name.toLowerCase());
-
-		return tags;
+		return data;
 	} catch (error) {
-		console.warn("[LastFm] Error fetching track tags:", error);
-		return [];
+		const timedOut = error instanceof Error && error.name === "TimeoutError";
+		logger.warn(`[LastFm] ${method} ${timedOut ? "timed out" : "failed"}: ${error}`);
+		return null;
 	}
 }
 
 /**
- * Calculates similarity between two sets of tags
- * @param tags1 First set of tags
- * @param tags2 Second set of tags
+ * Fetches tags/genres for a track from Last.fm. Cached, because the same track
+ * gets asked about repeatedly across a session.
+ */
+export async function getTrackTags(track: TrackLike, apiKey: string): Promise<string[]> {
+	if (!apiKey) return [];
+
+	const trackName = cleanTrackName(track.info.title ?? "");
+	const artistName = cleanArtistName(track.info.author ?? "");
+	if (!trackName || !artistName) return [];
+
+	const cacheKey = `${artistName.toLowerCase()}::${trackName.toLowerCase()}`;
+	const cached = tagCache.get(cacheKey);
+	if (cached) return cached;
+
+	const data = await lastfmGet<LastFmTrackInfoResponse>("track.getInfo", apiKey, {
+		artist: artistName,
+		track: trackName,
+	});
+
+	const tags = (data?.track?.toptags?.tag ?? []).slice(0, 5).map((tag) => tag.name.toLowerCase());
+
+	// Cache negatives too - a track with no tags will not grow them mid-session.
+	return remember(tagCache, TAG_CACHE_LIMIT, cacheKey, tags);
+}
+
+/**
+ * Calculates Jaccard similarity between two sets of tags.
  * @returns Similarity score between 0 and 1
  */
 export function calculateTagSimilarity(tags1: string[], tags2: string[]): number {
-	if (tags1.length === 0 || tags2.length === 0) {
-		return 0;
-	}
+	if (tags1.length === 0 || tags2.length === 0) return 0;
 
 	const set1 = new Set(tags1.map((t) => t.toLowerCase()));
 	const set2 = new Set(tags2.map((t) => t.toLowerCase()));
 
 	let matches = 0;
 	for (const tag of set1) {
-		if (set2.has(tag)) {
-			matches++;
-		}
+		if (set2.has(tag)) matches++;
 	}
 
-	// Jaccard similarity: intersection / union
 	const union = new Set([...set1, ...set2]).size;
 	return matches / union;
 }
 
 /**
- * Fetches similar tracks from Last.fm based on a given track
- * @param track The current track to find similar tracks for
- * @param apiKey The Last.fm API key
- * @param limit Maximum number of similar tracks to return (default: 10)
- * @returns Array of similar track search queries with metadata
+ * Fetches similar tracks from Last.fm, ranked by Last.fm's own `match` score
+ * (highest first). That score is why callers do not need to re-derive
+ * similarity per candidate.
  */
 export async function getSimilarTracks(
-	track: Track,
+	track: TrackLike,
 	apiKey: string,
-	limit = 10,
-): Promise<Array<{ query: string; artist: string; title: string; match?: string }>> {
-	if (!apiKey || apiKey === "") {
-		console.warn("[LastFm] No API key provided, cannot fetch similar tracks");
+	limit = 30,
+): Promise<SimilarCandidate[]> {
+	if (!apiKey) {
+		logger.warn("[LastFm] No API key provided, cannot fetch similar tracks");
 		return [];
 	}
 
-	const trackName = cleanTrackName(track.info.title);
-	const artistName = cleanArtistName(track.info.author);
+	const trackName = cleanTrackName(track.info.title ?? "");
+	const artistName = cleanArtistName(track.info.author ?? "");
+	if (!trackName || !artistName) return [];
 
-	try {
-		const url = new URL("https://ws.audioscrobbler.com/2.0/");
-		url.searchParams.append("method", "track.getsimilar");
-		url.searchParams.append("artist", artistName);
-		url.searchParams.append("track", trackName);
-		url.searchParams.append("api_key", apiKey);
-		url.searchParams.append("format", "json");
-		url.searchParams.append("limit", limit.toString());
-		url.searchParams.append("autocorrect", "1");
+	const cacheKey = `${artistName.toLowerCase()}::${trackName.toLowerCase()}::${limit}`;
+	const cached = similarCache.get(cacheKey);
+	if (cached) return cached;
 
-		const response = await fetch(url.toString());
+	const data = await lastfmGet<LastFmSimilarResponse>("track.getsimilar", apiKey, {
+		artist: artistName,
+		track: trackName,
+		limit: String(limit),
+	});
 
-		if (!response.ok) {
-			console.warn(`[LastFm] API request failed with status ${response.status}`);
-			return [];
-		}
+	const raw = data?.similartracks?.track ?? [];
+	// A failed request must not be cached as "no similar tracks".
+	if (data === null) return [];
+	if (raw.length === 0) return remember(similarCache, SIMILAR_CACHE_LIMIT, cacheKey, []);
 
-		const data: LastFmSimilarResponse = await response.json();
-
-		if (data.error) {
-			console.warn(`[LastFm] API error: ${data.message}`);
-			return [];
-		}
-
-		if (!data.similartracks || !data.similartracks.track || data.similartracks.track.length === 0) {
-			console.warn(`[LastFm] No similar tracks found for: ${artistName} - ${trackName}`);
-			return [];
-		}
-
-		// Convert Last.fm results to track objects
-		const tracks = data.similartracks.track
-			.filter((t) => t.name && t.artist?.name)
-			.filter((t) => {
-				// Filter out the original track
-				const isSameTrack =
+	const candidates = raw
+		.filter((t) => t.name && t.artist?.name)
+		.filter(
+			(t) =>
+				!(
 					t.name.toLowerCase() === trackName.toLowerCase() &&
-					t.artist.name.toLowerCase() === artistName.toLowerCase();
-				return !isSameTrack;
-			})
-			.map((t) => ({
-				query: `${t.artist.name} - ${t.name}`,
-				artist: t.artist.name,
-				title: t.name,
-				match: t.match,
-			}));
+					t.artist.name.toLowerCase() === artistName.toLowerCase()
+				),
+		)
+		.map((t) => ({
+			query: `${t.artist.name} - ${t.name}`,
+			artist: t.artist.name,
+			title: t.name,
+			match: Number.parseFloat(t.match ?? "0") || 0,
+		}))
+		.sort((a, b) => b.match - a.match);
 
-		console.log(`[LastFm] Found ${tracks.length} similar tracks for: ${artistName} - ${trackName}`);
-
-		return tracks;
-	} catch (error) {
-		console.error("[LastFm] Error fetching similar tracks:", error);
-		return [];
-	}
+	return remember(similarCache, SIMILAR_CACHE_LIMIT, cacheKey, candidates);
 }
 
 /**
- * Fetches top tracks from an artist using Last.fm
- * @param artistName The artist name
- * @param apiKey The Last.fm API key
- * @param limit Maximum number of tracks to return (default: 10)
- * @returns Array of track search queries
+ * Merges similar-track candidates from several seed tracks into one ranking.
+ *
+ * Weighted consensus replaces the old per-candidate genre check: a track that
+ * several recent seeds agree on scores higher than one only the newest seed
+ * suggested, which is what keeps a long autoplay chain from drifting - at the
+ * cost of 2-3 cached Last.fm calls instead of ~30 uncached ones.
+ *
+ * @param seeds Candidate lists, most recent seed first.
+ * @param weights Per-seed multipliers; the default decays with age.
+ */
+export function mergeSeedCandidates(
+	seeds: SimilarCandidate[][],
+	weights: number[] = [1, 0.6, 0.4],
+): SimilarCandidate[] {
+	const merged = new Map<string, SimilarCandidate & { seedCount: number }>();
+
+	seeds.forEach((candidates, seedIndex) => {
+		const weight = weights[seedIndex] ?? 0.25;
+		for (const candidate of candidates) {
+			const key = `${candidate.artist.toLowerCase()}::${candidate.title.toLowerCase()}`;
+			const existing = merged.get(key);
+			if (existing) {
+				existing.match += candidate.match * weight;
+				existing.seedCount++;
+			} else {
+				merged.set(key, {
+					...candidate,
+					match: candidate.match * weight,
+					seedCount: 1,
+				});
+			}
+		}
+	});
+
+	return (
+		[...merged.values()]
+			// Agreement across seeds outranks a single high score.
+			.sort((a, b) => b.seedCount - a.seedCount || b.match - a.match)
+			.map(({ seedCount: _seedCount, ...candidate }) => candidate)
+	);
+}
+
+/**
+ * Fetches top tracks for an artist. Used as the fallback when a track has no
+ * similar-track data at all (obscure or newly released tracks).
  */
 export async function getArtistTopTracks(
 	artistName: string,
 	apiKey: string,
-	limit = 10,
-): Promise<string[]> {
-	if (!apiKey || apiKey === "") {
-		console.warn("[LastFm] No API key provided, cannot fetch artist top tracks");
-		return [];
-	}
+	limit = 20,
+): Promise<SimilarCandidate[]> {
+	if (!apiKey) return [];
 
-	const cleanArtistName = artistName.split(/[,&]/)[0].trim();
+	const artist = cleanArtistName(artistName);
+	if (!artist) return [];
 
-	try {
-		const url = new URL("https://ws.audioscrobbler.com/2.0/");
-		url.searchParams.append("method", "artist.gettoptracks");
-		url.searchParams.append("artist", cleanArtistName);
-		url.searchParams.append("api_key", apiKey);
-		url.searchParams.append("format", "json");
-		url.searchParams.append("limit", limit.toString());
-		url.searchParams.append("autocorrect", "1");
+	const data = await lastfmGet<LastFmTopTracksResponse>("artist.gettoptracks", apiKey, {
+		artist,
+		limit: String(limit),
+	});
 
-		const response = await fetch(url.toString());
-
-		if (!response.ok) {
-			console.warn(`[LastFm] API request failed with status ${response.status}`);
-			return [];
-		}
-
-		const data: any = await response.json();
-
-		if (data.error) {
-			console.warn(`[LastFm] API error: ${data.message}`);
-			return [];
-		}
-
-		if (!data.toptracks || !data.toptracks.track || data.toptracks.track.length === 0) {
-			console.warn(`[LastFm] No top tracks found for artist: ${cleanArtistName}`);
-			return [];
-		}
-
-		const searchQueries = data.toptracks.track
-			.filter((t: any) => t.name && t.artist?.name)
-			.map((t: any) => `${t.artist.name} - ${t.name}`);
-
-		console.log(`[LastFm] Found ${searchQueries.length} top tracks for artist: ${cleanArtistName}`);
-
-		return searchQueries;
-	} catch (error) {
-		console.error("[LastFm] Error fetching artist top tracks:", error);
-		return [];
-	}
+	return (data?.toptracks?.track ?? [])
+		.filter((t): t is { name: string; artist: { name: string } } =>
+			Boolean(t.name && t.artist?.name),
+		)
+		.map((t) => ({
+			query: `${t.artist.name} - ${t.name}`,
+			artist: t.artist.name,
+			title: t.name,
+			match: 0,
+		}));
 }

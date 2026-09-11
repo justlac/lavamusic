@@ -39,6 +39,7 @@ export default withMermaid({
         items: [
           { text: 'Standard Setup', link: '/installation' },
           { text: 'Docker Guide', link: '/docker' },
+          { text: 'YouTube Troubleshooting', link: '/youtube-troubleshooting' },
         ]
       },
       {

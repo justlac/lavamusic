@@ -5,6 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "generate": "bun run scripts/generate-registry.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
     "prebuild": "bun run generate",
     "build": "bun run scripts/build.ts",
     "predev": "bun run generate",

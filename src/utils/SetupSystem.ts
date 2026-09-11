@@ -12,6 +12,7 @@ import type { Lavamusic } from "../structures/index";
 import logger from "../structures/Logger";
 import type { Requester } from "../types";
 import { getButtons } from "./Buttons";
+import { autoplayNote } from "./functions/player";
 
 /**
  * A function that will generate an embed based on the player's current track.
@@ -28,14 +29,15 @@ function neb(embed: EmbedBuilder, player: Player, client: Lavamusic, locale: str
 		client.user!.displayAvatarURL({ extension: "png" });
 	const icon = player.queue.current.info.artworkUrl || client.config.links.img;
 
-	const description = t(I18N.player.setupStart.description, {
-		lng: locale,
-		title: player.queue.current.info.title,
-		uri: player.queue.current.info.uri,
-		author: player.queue.current.info.author,
-		length: client.utils.formatTime(player.queue.current.info.duration),
-		requester: (player.queue.current.requester as Requester).id,
-	});
+	const description =
+		t(I18N.player.setupStart.description, {
+			lng: locale,
+			title: player.queue.current.info.title,
+			uri: player.queue.current.info.uri,
+			author: player.queue.current.info.author,
+			length: client.utils.formatTime(player.queue.current.info.duration),
+			requester: (player.queue.current.requester as Requester).id,
+		}) + autoplayNote(player.queue.current, locale);
 	return embed
 		.setAuthor({
 			name: t(I18N.player.setupStart.now_playing, { lng: locale }),
@@ -171,7 +173,7 @@ async function trackStart(
 	}
 
 	const iconUrl =
-		client.config.icons[player.queue.current!.info.sourceName] ||
+		client.config.icons[track.info.sourceName] ||
 		client.user!.displayAvatarURL({ extension: "png" });
 
 	const embed = new EmbedBuilder()
@@ -186,8 +188,8 @@ async function trackStart(
 				uri: track.info.uri,
 				author: track.info.author,
 				length: client.utils.formatTime(track.info.duration),
-				requester: (player.queue.current!.requester as Requester).id,
-			}),
+				requester: (track.requester as Requester).id,
+			}) + autoplayNote(track, locale),
 		)
 		.setColor(client.color.main);
 
@@ -221,7 +223,7 @@ async function trackStart(
 				}),
 			})
 			.then((msg) => {
-				client.db.setSetup(msg.guild.id, msg.id, msg.channel.id);
+				client.db.setSetup(msg.guild.id, msg.channel.id, msg.id);
 			})
 			.catch(() => {
 				null;
@@ -264,7 +266,7 @@ async function updateSetup(client: Lavamusic, guild: Guild, locale: string): Pro
 						author: player.queue.current.info.author,
 						length: client.utils.formatTime(player.queue.current.info.duration),
 						requester: (player.queue.current.requester as Requester).id,
-					}),
+					}) + autoplayNote(player.queue.current, locale),
 				)
 				.setColor(client.color.main);
 
@@ -309,7 +311,7 @@ async function updateSetup(client: Lavamusic, guild: Guild, locale: string): Pro
 
 async function buttonReply(int: any, args: string, color: ColorResolvable): Promise<void> {
 	const embed = new EmbedBuilder();
-	let m: Message;
+	let m: Message | undefined;
 	if (int.replied) {
 		m = await int.editReply({ embeds: [embed.setColor(color).setDescription(args)] }).catch(() => {
 			null;
@@ -320,7 +322,7 @@ async function buttonReply(int: any, args: string, color: ColorResolvable): Prom
 		});
 	}
 	setTimeout(async () => {
-		if (int && !int.flags?.has(MessageFlags.Ephemeral)) {
+		if (m?.deletable && !int.flags?.has(MessageFlags.Ephemeral)) {
 			await m.delete().catch(() => {
 				null;
 			});

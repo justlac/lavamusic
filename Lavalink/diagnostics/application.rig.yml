@@ -1,0 +1,62 @@
+# Diagnostic-only Lavalink config. Contains NO credentials, deliberately:
+# every other source is off so a failure can only be YouTube.
+#
+# Keep the plugin pin in step with ../example.application.yml.
+server:
+  port: 2333
+  address: 0.0.0.0
+
+lavalink:
+  server:
+    password: "youshallnotpass"
+    sources:
+      youtube: false # the built-in source is deprecated; the plugin owns YouTube
+      bandcamp: false
+      soundcloud: false
+      twitch: false
+      vimeo: false
+      nico: false
+      http: false
+      local: false
+    bufferDurationMs: 400
+    frameBufferDurationMs: 5000
+    trackStuckThresholdMs: 10000
+  plugins:
+    # Snapshot versions are the BARE 40-char commit hash - NOT "<hash>-SNAPSHOT".
+    - dependency: "dev.lavalink.youtube:youtube-plugin:f45bbb7aebfcbc1c553769e04af6cd43afa8b7c3"
+      repository: "https://maven.lavalink.dev/snapshots"
+      snapshot: true
+
+plugins:
+  youtube:
+    enabled: true
+    remoteCipher:
+      url: "https://cipher.kikkia.dev"
+      userAgent: "lavamusic-diagnostics"
+      retries: 3
+      retryDelay: 500
+    allowSearch: true
+    allowDirectVideoIds: true
+    allowDirectPlaylistIds: true
+    # Every client enabled for playback so probe.sh can address each one
+    # individually via /youtube/stream/{id}?withClient=X. This is a DIAGNOSTIC
+    # config - do not copy this client list into production, use the measured
+    # order in ../example.application.yml instead.
+    clients:
+      - "IOS"
+      - "TV"
+      - "TVHTML5_SIMPLY"
+      - "ANDROID_VR"
+      - "ANDROID_MUSIC"
+      - "MUSIC"
+      - "WEB"
+      - "WEBEMBEDDED"
+      - "MWEB"
+
+logging:
+  level:
+    root: INFO
+    lavalink: INFO
+    dev.lavalink.youtube: DEBUG
+  request:
+    enabled: false

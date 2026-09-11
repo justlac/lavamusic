@@ -23,7 +23,7 @@ const envSchema = z.object({
 	TOKEN: z.string(),
 	CLIENT_ID: z.string(),
 	DEFAULT_LANGUAGE: z.string().default("EnglishUS"),
-	PREFIX: z.string().default("!"),
+	PREFIX: z.string().default("-"),
 	OWNER_IDS: z.preprocess(
 		(val) => (typeof val === "string" ? JSON.parse(val) : val),
 		z.string().array().optional(),
@@ -80,9 +80,5 @@ const envSchema = z.object({
 
 type Env = z.infer<typeof envSchema>;
 
+// zod already rejects missing/invalid required variables during parse
 export const env: Env = envSchema.parse(process.env);
-for (const key in env) {
-	if (!(key in env)) {
-		throw new Error(`Missing env variable: ${key}. Please check the .env file and try again.`);
-	}
-}

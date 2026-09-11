@@ -1,6 +1,5 @@
 import { I18N } from "../../structures/I18n";
 import { Command, type Context, type Lavamusic } from "../../structures/index";
-import { autoPlayFunction } from "../../utils/functions/player";
 import { EmbedLinks, ReadMessageHistory, SendMessages, ViewChannel } from "../../utils/Permissions";
 
 export default class Skip extends Command {
@@ -48,24 +47,14 @@ export default class Skip extends Command {
 				],
 			});
 		}
-
-		// Check if queue will be empty after skip and autoplay is enabled
-		const willBeEmpty = player.queue.tracks.length === 0;
-
-		if (willBeEmpty && !autoplay) {
-			await player.stopPlaying(false, false);
+		// skip() throws RangeError when the queue is empty, so stop instead;
+		// with autoplay enabled let stopPlaying trigger the next track.
+		// (Replaces the old manual autoPlayFunction() call: the else branch only
+		// runs on a NON-empty queue, so that trigger was unreachable anyway.)
+		if (!player.queue.tracks.length) {
+			await player.stopPlaying(false, Boolean(autoplay));
 		} else {
 			await player.skip();
-
-			// If autoplay is enabled and queue is now empty, trigger autoplay
-			if (autoplay && willBeEmpty && currentTrack) {
-				// Give a small delay for the skip to process
-				setTimeout(() => {
-					autoPlayFunction(player, currentTrack).catch((error) => {
-						console.error("[Skip] Failed to trigger autoplay:", error);
-					});
-				}, 100);
-			}
 		}
 
 		if (ctx.isInteraction) {
@@ -83,7 +72,7 @@ export default class Skip extends Command {
 		// Wrap reaction in try-catch to handle message deletion race condition
 		try {
 			await ctx.message?.react("👍");
-		} catch (error) {
+		} catch {
 			// Silently ignore - message may have been deleted by TrackEnd event
 		}
 	}

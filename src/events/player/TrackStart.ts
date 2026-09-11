@@ -17,6 +17,7 @@ import { I18N, t } from "../../structures/I18n";
 import { Event, type Lavamusic } from "../../structures/index";
 import type { Requester } from "../../types";
 import { LavamusicEventType } from "../../types/events";
+import { autoplayNote } from "../../utils/functions/player";
 import { trackStart } from "../../utils/SetupSystem";
 
 export default class TrackStart extends Event {
@@ -55,7 +56,8 @@ export default class TrackStart extends Event {
 				`**[${track.info.title}](${track.info.uri})**\n` +
 					`-# ${t(I18N.player.trackStart.author)}: ${track.info.author}\n` +
 					`-# ${t(I18N.player.trackStart.duration)}: ${track.info.isStream ? "LIVE" : this.client.utils.formatTime(track.info.duration)}\n` +
-					`-# ${t(I18N.player.trackStart.requested_by, { user: (track.requester as Requester).username })}`,
+					`-# ${t(I18N.player.trackStart.requested_by, { user: (track.requester as Requester).username })}` +
+					autoplayNote(track, locale),
 			)
 			.setColor(this.client.color.main);
 

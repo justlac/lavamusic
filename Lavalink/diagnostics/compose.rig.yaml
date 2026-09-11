@@ -1,0 +1,32 @@
+# Throwaway Lavalink node for diagnosing YouTube playback.
+#
+# Runs ONLY youtube-source, with no bot, no Discord token and no credentials,
+# so any failure is unambiguously YouTube rather than the bot or LavaSrc.
+#
+#   docker compose -f compose.rig.yaml up -d
+#   sleep 30 && bash probe.sh      # per-client verdicts
+#   bash chain.sh                  # natural fallback chain + loadtracks paths
+#   docker compose -f compose.rig.yaml down -v
+#
+# Plugins are intentionally not persisted here: it is a throwaway, the jar is
+# ~1.6 MB, and fewer moving parts matters more than start-up speed.
+name: lava-rig
+
+services:
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4.2.2
+    container_name: lava-rig-lavalink
+    environment:
+      - _JAVA_OPTIONS=-Xmx1G
+      - SERVER_PORT=2333
+    volumes:
+      - ./application.rig.yml:/opt/Lavalink/application.yml:ro
+    ports:
+      # Loopback only - this node is not authenticated beyond the default password.
+      - "127.0.0.1:2333:2333"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -H 'Authorization: youshallnotpass' http://localhost:2333/version || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s

@@ -23,6 +23,10 @@ We support YouTube, Spotify, SoundCloud, Apple Music, and direct file links (MP3
 * **Check Lavalink**: Ensure your Lavalink server is active (default: `localhost:2333`).
 * **Verify Credentials**: Double-check the Lavalink password in both `.env` and `application.yml`.
 * **Check Permissions**: Ensure the bot has `Connect` and `Speak` permissions in your voice channel.
+* **If only YouTube is affected**, it is almost certainly YouTube rather than the
+  bot — see [YouTube Troubleshooting](/youtube-troubleshooting). The bot names
+  the failure in chat, and the owner-only `ytdiag` command probes every YouTube
+  client and reports which one broke.
 
 ### Why is the music lagging or skipping?
 

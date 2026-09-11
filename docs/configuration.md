@@ -15,7 +15,10 @@ Your bot's behavior is defined by these key variables. Create this file by copyi
 
 ### 📜 Bot Settings
 
-* **`PREFIX`**: The default character used to trigger commands (e.g., `!` or `/`).
+* **`PREFIX`**: The character used to trigger message commands. Defaults to `-`.
+  Note that `-` is **always** accepted in addition to whatever you set here, so
+  owner tools like `-ytdiag` work regardless of per-guild configuration. A `-`
+  followed by a space is ignored, so markdown lists do not trigger commands.
 * **`DEFAULT_LANGUAGE`**: The initial language for the bot (e.g., `en`, `es`, `fr`).
 * **`OWNER_IDS`**: A list of Discord User IDs that have administrative access to the bot.
   * Example: `OWNER_IDS=["123456789", "987654321"]`

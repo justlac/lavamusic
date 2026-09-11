@@ -202,7 +202,7 @@ export default class Lyrics extends Command {
 							.setStyle(ButtonStyle.Secondary)
 							.setDisabled(current === 0),
 						new ButtonBuilder()
-							.setCustomId("stop")
+							.setCustomId("lyrics_stop")
 							.setEmoji(client.emoji.page.cancel)
 							.setStyle(ButtonStyle.Danger),
 						new ButtonBuilder()
@@ -233,7 +233,7 @@ export default class Lyrics extends Command {
 							currentPage--;
 						} else if (interaction.customId === "next") {
 							currentPage++;
-						} else if (interaction.customId === "stop") {
+						} else if (interaction.customId === "lyrics_stop") {
 							collectorActive = false;
 							await interaction.update({
 								components: [createLyricsContainer(currentPage)],
@@ -251,7 +251,7 @@ export default class Lyrics extends Command {
 				}
 
 				// After timeout or stop, just remove the navigation buttons but keep lyrics visible
-				if (ctx.guild?.members.me?.permissionsIn(ctx.channelId).has("SendMessages")) {
+				if (ctx.guild?.members.me?.permissionsIn(ctx.channel.id).has("SendMessages")) {
 					await ctx
 						.editMessage({
 							components: [createLyricsContainer(currentPage)],

@@ -26,8 +26,19 @@ lavalink:
       repository: "https://maven.lavalink.dev/releases"
     - dependency: "com.github.devoxin:lavadspx-plugin:0.0.5" # https://github.com/devoxin/LavaDSPX-Plugin
       repository: "https://jitpack.io"
-    - dependency: "dev.lavalink.youtube:youtube-plugin:1.18.1" # https://github.com/lavalink-devs/youtube-source
-      snapshot: false
+    # https://github.com/lavalink-devs/youtube-source
+    # Snapshot versions are the BARE 40-char commit hash - NOT "<hash>-SNAPSHOT".
+    # YouTube fixes land on main weeks before a release is tagged, so a release
+    # number (or `latest.release`) will usually be broken. To find the newest
+    # main commit that actually has a published jar:
+    #   curl -s "https://maven.lavalink.dev/api/maven/details/snapshots/dev/lavalink/youtube/youtube-plugin" \
+    #     | grep -oE '"name":"[0-9a-f]{40}"' | grep -oE '[0-9a-f]{40}' | sort > /tmp/snap.txt
+    #   curl -s "https://api.github.com/repos/lavalink-devs/youtube-source/commits?sha=main&per_page=100" \
+    #     | grep -oE '"sha": "[0-9a-f]{40}"' | grep -oE '[0-9a-f]{40}' > /tmp/main.txt
+    #   grep -nxFf /tmp/snap.txt /tmp/main.txt | head -1
+    - dependency: "dev.lavalink.youtube:youtube-plugin:f45bbb7aebfcbc1c553769e04af6cd43afa8b7c3"
+      repository: "https://maven.lavalink.dev/snapshots"
+      snapshot: true
     - dependency: "com.github.topi314.lavalyrics:lavalyrics-plugin:1.1.0" # https://github.com/topi314/LavaLyrics
       repository: "https://maven.lavalink.dev/releases"
     - dependency: "me.duncte123:java-lyrics-plugin:1.6.6" # https://github.com/DuncteBot/java-timed-lyrics
@@ -47,10 +58,17 @@ plugins:
     enabled: true
     # YouTube's cipher changes are becoming more frequent and complex, making it harder to keep up.
     # To simplify signature deciphering, you can use a remote cipher server like yt-cipher, a lightweight Deno server with a REST API. More details are available at https://github.com/kikkia/yt-cipher
+    # Signature/n deciphering is no longer maintained in-Java upstream, so this
+    # is effectively required: without it you get
+    # "ScriptExtractionException: Must find sig function from script: .../base.js"
+    # The public instance needs no password (10 req/s, fine past 1000 players).
+    # If self-hosting inside Docker use the service name - `localhost` is the
+    # Lavalink container itself.
     remoteCipher:
-      userAgent: "your_service_name"
-      url: "http://localhost:8001" # The base URL of your remote cipher server.
-      password: "your_secret_password" # The password to authenticate with your remote cipher server.
+      url: "https://cipher.kikkia.dev"
+      userAgent: "lavamusic"
+      retries: 3
+      retryDelay: 500
     oauth:
       enabled: false
       # refreshToken: "Insert your refresh token here" # For more details, please refer to https://github.com/lavalink-devs/youtube-source?tab=readme-ov-file#using-oauth-tokens
@@ -58,37 +76,43 @@ plugins:
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     # For more details about client setup, refer to https://github.com/lavalink-devs/youtube-source?tab=readme-ov-file#available-clients
+    # Queried in order until one returns a playable response. This order was
+    # measured against real videos - re-measure from your own IP, because the
+    # bot-check gate is IP-reputation based (see probe instructions in the repo).
     clients:
-      - "TVHTML5_SIMPLY"
-      - "ANDROID_MUSIC"
+      - "IOS"
+      - "TV"
       - "MUSIC"
+      - "TVHTML5_SIMPLY"
+      - "ANDROID_VR"
       - "WEB"
-      - "WEBEMBEDDED"
-    TVHTML5_SIMPLY:
-      playback: true
-      playlistLoading: true
-      searching: true
-      videoLoading: true
-    ANDROID_MUSIC:
-      playlistLoading: false
-      videoLoading: true
-      searching: true
-      playback: true
-    MUSIC:
-      playlistLoading: false
-      videoLoading: false
-      searching: true
-      playback: false
-    WEB:
-      playlistLoading: false
-      videoLoading: true
-      searching: true
-      playback: true
-    WEBEMBEDDED:
-      playlistLoading: false
-      videoLoading: false
-      searching: false
-      playback: true
+      - "MWEB"
+    # Per-client capability toggles MUST be nested under `clientOptions`.
+    # YoutubeConfig binds a Map<String, ClientOptions> at
+    # plugins.youtube.clientOptions, so bare top-level client keys (which this
+    # file used to have, and which most Lavalink configs copy) match no
+    # property and are SILENTLY IGNORED.
+    #
+    # Whichever client comes first and claims `searching` handles search. IOS
+    # streams reliably but returns nothing for search, so it must not claim it -
+    # otherwise every search comes back loadType:empty.
+    # Leave playlistLoading on for IOS: TV has no metadata support at all and
+    # TVHTML5_SIMPLY has no playlist support.
+    clientOptions:
+      IOS:
+        searching: false
+      TV:
+        searching: false
+      MUSIC:
+        playback: false
+        videoLoading: false
+        playlistLoading: false
+      TVHTML5_SIMPLY:
+        searching: false
+      ANDROID_VR:
+        searching: false
+      MWEB:
+        searching: false
   lavasrc:
     providers:
       - 'ytsearch:"%ISRC%"'

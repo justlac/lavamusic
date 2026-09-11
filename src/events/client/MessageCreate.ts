@@ -10,10 +10,12 @@ import {
 	PermissionFlagsBits,
 	type TextChannel,
 } from "discord.js";
+
 import { I18N, t } from "../../structures/I18n";
 import { Context, Event, type Lavamusic } from "../../structures/index";
 import logger from "../../structures/Logger";
 import { LavamusicEventType } from "../../types/events";
+import { buildPrefixRegex } from "../../utils/Prefix";
 export default class MessageCreate extends Event {
 	constructor(client: Lavamusic, file: string) {
 		super(client, file, {
@@ -46,10 +48,7 @@ export default class MessageCreate extends Event {
 			return;
 		}
 
-		const escapeRegex = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-		const prefixRegex = new RegExp(
-			`^(<@!?${this.client.user?.id}>|${escapeRegex(guild.prefix)})\\s*`,
-		);
+		const prefixRegex = buildPrefixRegex(this.client.user?.id, guild.prefix);
 		if (!prefixRegex.test(message.content)) return;
 		const match = message.content.match(prefixRegex);
 		if (!match) return;
@@ -229,8 +228,8 @@ export default class MessageCreate extends Event {
 					if (
 						!(
 							isDev ||
-							(hasDJRole &&
-								!(message.member as GuildMember).permissions.has(PermissionFlagsBits.ManageGuild))
+							hasDJRole ||
+							(message.member as GuildMember).permissions.has(PermissionFlagsBits.ManageGuild)
 						)
 					) {
 						return await message.reply({
@@ -293,7 +292,7 @@ export default class MessageCreate extends Event {
 		}
 
 		try {
-			return command.run(this.client, ctx, ctx.args);
+			return await command.run(this.client, ctx, ctx.args);
 		} catch (error: any) {
 			logger.error(error);
 			await message.reply({
@@ -308,7 +307,7 @@ export default class MessageCreate extends Event {
 				const embed = new EmbedBuilder()
 					.setAuthor({
 						name: "Prefix - Command Logs",
-						iconURL: this.client.user?.avatarURL({ size: 2048 }) ?? "",
+						iconURL: this.client.user?.avatarURL({ size: 2048 }) ?? undefined,
 					})
 					.setColor(this.client.config.color.green)
 					.addFields(
