@@ -75,6 +75,18 @@ describe("buildPrefixRegex", () => {
 
 	test("a guild prefix of `-` does not double-match or break", () => {
 		expect(invoked("-play", "-")).toBe("play");
+		expect(invoked("-ytdiag", "-")).toBe("ytdiag");
+	});
+
+	test("`- ` stays inert even when the guild prefix IS `-`", () => {
+		// Regression: the configured-prefix branch allows trailing whitespace,
+		// so a guild whose prefix is itself `-` bypassed the lookahead and
+		// turned every markdown list into command invocations. `-` is now the
+		// default PREFIX, so this is the common case, not an edge case.
+		expect(invoked("- play some music later", "-")).toBeNull();
+		expect(invoked("- shuffle the deck", "-")).toBeNull();
+		expect(invoked("- buy milk\n- walk dog", "-")).toBeNull();
+		expect(invoked("-   skip", "-")).toBeNull();
 	});
 
 	test("escapeRegex escapes the characters that matter", () => {

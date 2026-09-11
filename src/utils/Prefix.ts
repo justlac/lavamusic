@@ -34,7 +34,14 @@ export function escapeRegex(str: string): string {
  */
 export function buildPrefixRegex(botId: string | undefined, guildPrefix: string): RegExp {
 	const mention = `<@!?${botId}>`;
-	const configured = escapeRegex(guildPrefix);
 	const always = escapeRegex(ALWAYS_PREFIX);
-	return new RegExp(`^(?:(?:${mention}|${configured})\\s*|${always}(?!\\s))`);
+
+	// A guild whose configured prefix IS the always-prefix must not get the
+	// whitespace-tolerant branch: that would re-admit "- play some music" and
+	// defeat the lookahead below. This is the common case now that `-` is the
+	// default PREFIX, so the dash is matched by the strict branch only.
+	const lenient =
+		guildPrefix === ALWAYS_PREFIX ? mention : `${mention}|${escapeRegex(guildPrefix)}`;
+
+	return new RegExp(`^(?:(?:${lenient})\\s*|${always}(?!\\s))`);
 }
