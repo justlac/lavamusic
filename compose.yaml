@@ -7,7 +7,11 @@ services:
     # Useful if you want to use an external/hosted Lavalink node
     profiles: [lavalink, all]
     container_name: lavamusic-lavalink
-    image: ghcr.io/lavalink-devs/lavalink:latest
+    # Pinned deliberately. This is the component YouTube breakage lands on,
+    # and the plugin hash in application.yml is validated against a specific
+    # Lavalink version - letting the image float would silently change the
+    # runtime underneath a configuration that was measured, not guessed.
+    image: ghcr.io/lavalink-devs/lavalink:4.2.2
     restart: unless-stopped
     environment:
       - _JAVA_OPTIONS=-Xmx2G # Limit memory usage to 2GB
@@ -22,7 +26,11 @@ services:
       # NOTE: `latest.release` is NOT usable here: it can only ever reach the
       # newest tagged release, and YouTube fixes land on youtube-source's main
       # branch weeks before a release is cut. Pin the hash instead.
-      # Make sure the host dir is writable by uid/gid 322.
+      # REQUIRED FIRST: the image runs as uid/gid 322, and a plugins dir
+      # created by your own user is not writable by it. Lavalink then dies
+      # at boot with `FileNotFoundException ... (Permission denied)` while
+      # downloading the jar - Spring aborts, the node never starts.
+      #   mkdir -p Lavalink/plugins && sudo chown 322:322 Lavalink/plugins
       - ./Lavalink/plugins/:/opt/Lavalink/plugins/
     networks:
       - lavalink
